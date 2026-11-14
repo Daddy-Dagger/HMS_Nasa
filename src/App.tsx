@@ -9,9 +9,26 @@ import {
   Smartphone,
   Activity,
   Radio,
+  AlertTriangle,
+  CheckCircle2,
+  Database,
 } from "lucide-react";
-import { AnatomicalZone, HealthStatus, EscalationTier } from "./types/mission";
-import { MOCK_30_DAY_MISSION } from "./data/mock30DayMission";
+import {
+  AnatomicalZone,
+  HealthStatus,
+  EscalationTier,
+  CrewMemberId,
+  DailyHealthMetric,
+  CommsMode,
+  QueuedDossier,
+} from "./types/mission";
+import { INITIAL_CREW_DATASETS } from "./data/crewData";
+import {
+  computeAllZoneStatuses,
+  computeOverallCrewStatus,
+  CREW_BASELINES,
+  evaluateSensorConfidence,
+} from "./utils/driftEngine";
 import { BodyMap } from "./components/BodyMap";
 import { BodyScanView } from "./components/BodyScanView";
 import { ConstellationGlyph } from "./components/ConstellationGlyph";
@@ -21,29 +38,30 @@ import { FlightSurgeonPacketModal } from "./components/FlightSurgeonPacketModal"
 import { SANSExamModal, SANSExamResult } from "./components/SANSExamModal";
 import { WearableWatchHUD } from "./components/WearableWatchHUD";
 import { MobileView } from "./components/MobileView";
-import { MedicalProcedureModal } from "./components/MedicalProcedureModal";
-
-type CrewMemberId = "CDR_MILLER" | "PLT_CHEN" | "ENG_KOWALSKI" | "SCI_VANCE";
+import { MedicalProcedureModal, ProcedureTypeId } from "./components/MedicalProcedureModal";
+import { FaultInjectionBar } from "./components/FaultInjectionBar";
 
 interface CrewMemberInfo {
   id: CrewMemberId;
   name: string;
   role: string;
-  status: HealthStatus;
-  primaryAlert?: string;
 }
 
 export default function App() {
   // Current Sol (Day 1 to 30)
-  const [currentSol, setCurrentSol] = useState<number>(18);
+  const [currentSol, setCurrentSol] = useState<number>(23);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const playTimerRef = useRef<number | null>(null);
 
   // Selected anatomical zone
   const [selectedZone, setSelectedZone] = useState<AnatomicalZone>("CARDIOVASCULAR");
 
-  // Delay mode: LEO real-time vs Deep-Space Mars 20m lag
-  const [delayMode, setDelayMode] = useState<"LEO_REALTIME" | "MARS_20M_DELAY">("MARS_20M_DELAY");
+  // Delay mode: LEO real-time vs Deep-Space Mars 20m lag vs Communications Blackout
+  const [delayMode, setDelayMode] = useState<CommsMode>("MARS_20M_DELAY");
+
+  // Queued dossiers during communications blackout
+  const [queuedDossiers, setQueuedDossiers] = useState<QueuedDossier[]>([]);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
 
   // View mode: Full PC console vs Mobile Handheld vs Minimalist Wearable HUD
   const [viewMode, setViewMode] = useState<"EXPEDITION_CONSOLE" | "MOBILE_PAD" | "WEARABLE_WATCH_HUD">("EXPEDITION_CONSOLE");
@@ -54,71 +72,67 @@ export default function App() {
   // Active crew member selector
   const [activeCrew, setActiveCrew] = useState<CrewMemberId>("CDR_MILLER");
 
-  // Flight surgeon packet modal
-  const [packetOpen, setPacketOpen] = useState<boolean>(false);
+  // Telemetry datasets for all crew members (supports live fault injection)
+  const [crewDatasets, setCrewDatasets] = useState<Record<CrewMemberId, DailyHealthMetric[]>>(() =>
+    JSON.parse(JSON.stringify(INITIAL_CREW_DATASETS))
+  );
 
-  // SANS Ocular Exam modal & result
+  // Active injected fault tracking
+  const [activeFault, setActiveFault] = useState<"NONE" | "SENSOR_GLITCH" | "BP_DRIFT" | "SLEEP_DECLINE">("NONE");
+
+  // Modals state
+  const [packetOpen, setPacketOpen] = useState<boolean>(false);
   const [sansExamOpen, setSansExamOpen] = useState<boolean>(false);
   const [sansExamResult, setSansExamResult] = useState<SANSExamResult | null>(null);
-
-  // Medical procedure step-by-step modal
   const [procedureModalOpen, setProcedureModalOpen] = useState<boolean>(false);
-  const [activeProcedure, setActiveProcedure] = useState<"LBNP_CHAPS" | "OCULAR_ULTRASOUND" | "CIRCADIAN_LIGHTING">("LBNP_CHAPS");
+  const [activeProcedure, setActiveProcedure] = useState<ProcedureTypeId>("TIER1_REST_RECOVERY");
+  const [procedureCompletionLog, setProcedureCompletionLog] = useState<string | null>(null);
 
-  // Crew roster
+  // Crew roster metadata
   const crewRoster: CrewMemberInfo[] = [
-    { id: "CDR_MILLER", name: "CDR MILLER", role: "Mission Commander", status: "CRITICAL", primaryAlert: "BP 142/92 // Sol 18 Drift" },
-    { id: "PLT_CHEN", name: "PLT CHEN", role: "Lunar/Mars Pilot", status: "NOMINAL", primaryAlert: "Baseline 116/74 // Nominal" },
-    { id: "ENG_KOWALSKI", name: "ENG KOWALSKI", role: "Flight Engineer", status: "NOMINAL", primaryAlert: "Sleep 7.1h // Nominal" },
-    { id: "SCI_VANCE", name: "SCI VANCE", role: "Science Specialist", status: "ATTENTION", primaryAlert: "Sleep 5.8h // Mild Debt" },
+    { id: "CDR_MILLER", name: "CDR MILLER", role: "Mission Commander" },
+    { id: "PLT_CHEN", name: "PLT CHEN", role: "Lunar/Mars Pilot" },
+    { id: "ENG_KOWALSKI", name: "ENG KOWALSKI", role: "Flight Engineer" },
+    { id: "SCI_VANCE", name: "SCI VANCE", role: "Science Specialist" },
   ];
 
-  // Current metric for active Sol
-  const currentMetric = MOCK_30_DAY_MISSION[currentSol - 1] || MOCK_30_DAY_MISSION[0];
+  // Active astronaut's 30-day mission telemetry
+  const activeMissionData = crewDatasets[activeCrew] || crewDatasets.CDR_MILLER;
+  const currentMetric = activeMissionData[currentSol - 1] || activeMissionData[0];
+  const activeBaseline = CREW_BASELINES[activeCrew] || CREW_BASELINES.CDR_MILLER;
+  const confidence = evaluateSensorConfidence(currentMetric, activeBaseline);
 
-  // Dynamic zone statuses computed from currentSol telemetry
-  const computeZoneStatuses = (): Record<AnatomicalZone, HealthStatus> => {
-    if (activeCrew !== "CDR_MILLER") {
-      return {
-        CARDIOVASCULAR: activeCrew === "SCI_VANCE" ? "ATTENTION" : "NOMINAL",
-        CRANIAL_SANS: "NOMINAL",
-        NEURO_BEHAVIORAL: activeCrew === "SCI_VANCE" ? "ATTENTION" : "NOMINAL",
-        MUSCULOSKELETAL: "NOMINAL",
-        IMMUNE_METABOLIC: "NOMINAL",
-      };
+  // Dynamic zone statuses computed by CUSUM / EWMA drift engine for the active crew
+  const zoneStatuses = computeAllZoneStatuses(activeCrew, activeMissionData, currentSol);
+
+  // Factor in SANS exam result if logged for Cranial/SANS zone
+  if (sansExamResult) {
+    if (sansExamResult.sansStage === "STAGE_2_MODERATE") {
+      zoneStatuses.CRANIAL_SANS = "CRITICAL";
+    } else if (sansExamResult.sansStage === "STAGE_1_MILD") {
+      zoneStatuses.CRANIAL_SANS = "ATTENTION";
     }
+  }
 
-    const isCriticalBP = currentMetric.systolicBP >= 140;
-    const isWarnBP = currentMetric.systolicBP >= 128;
-    const isSevereSleep = currentMetric.sleepHours < 5.0;
-    const isWarnSleep = currentMetric.sleepHours < 6.5;
+  // Factor in conservative escalation if data quality is degraded
+  const conservativeEscalationActive = confidence.score < 60;
+  if (conservativeEscalationActive && zoneStatuses.CARDIOVASCULAR === "NOMINAL") {
+    zoneStatuses.CARDIOVASCULAR = "ATTENTION";
+  }
 
-    const sansStatus: HealthStatus = sansExamResult
-      ? sansExamResult.sansStage === "STAGE_2_MODERATE"
-        ? "CRITICAL"
-        : sansExamResult.sansStage === "STAGE_1_MILD"
-        ? "ATTENTION"
-        : "NOMINAL"
-      : isCriticalBP
-      ? "ATTENTION"
-      : "NOMINAL";
-
-    return {
-      CARDIOVASCULAR: isCriticalBP ? "CRITICAL" : isWarnBP ? "ATTENTION" : "NOMINAL",
-      CRANIAL_SANS: sansStatus,
-      NEURO_BEHAVIORAL: isSevereSleep ? "CRITICAL" : isWarnSleep ? "ATTENTION" : "NOMINAL",
-      MUSCULOSKELETAL: currentSol > 20 ? "ATTENTION" : "NOMINAL",
-      IMMUNE_METABOLIC: currentMetric.bloodSugar > 115 ? "ATTENTION" : "NOMINAL",
-    };
+  // Dynamic overall crew statuses for the Crew Mesh bar
+  const crewMeshStatusMap: Record<CrewMemberId, HealthStatus> = {
+    CDR_MILLER: computeOverallCrewStatus(computeAllZoneStatuses("CDR_MILLER", crewDatasets.CDR_MILLER, currentSol)),
+    PLT_CHEN: computeOverallCrewStatus(computeAllZoneStatuses("PLT_CHEN", crewDatasets.PLT_CHEN, currentSol)),
+    ENG_KOWALSKI: computeOverallCrewStatus(computeAllZoneStatuses("ENG_KOWALSKI", crewDatasets.ENG_KOWALSKI, currentSol)),
+    SCI_VANCE: computeOverallCrewStatus(computeAllZoneStatuses("SCI_VANCE", crewDatasets.SCI_VANCE, currentSol)),
   };
 
-  const zoneStatuses = computeZoneStatuses();
-
-  // Active escalation tier
+  // Active clinical escalation tier computed dynamically
   const currentTier: EscalationTier =
-    currentMetric.systolicBP >= 140 || currentMetric.sleepHours < 4.5
+    zoneStatuses.CARDIOVASCULAR === "CRITICAL" || zoneStatuses.NEURO_BEHAVIORAL === "CRITICAL" || zoneStatuses.CRANIAL_SANS === "CRITICAL"
       ? 2
-      : currentMetric.systolicBP >= 128 || currentMetric.sleepHours < 6.0
+      : zoneStatuses.CARDIOVASCULAR === "ATTENTION" || zoneStatuses.NEURO_BEHAVIORAL === "ATTENTION" || conservativeEscalationActive
       ? 1
       : 1;
 
@@ -142,10 +156,151 @@ export default function App() {
     };
   }, [isPlaying]);
 
+  // Handle delay mode toggle with blackout queue and sync
+  const cycleDelayMode = () => {
+    const nextMode: CommsMode =
+      delayMode === "LEO_REALTIME"
+        ? "MARS_20M_DELAY"
+        : delayMode === "MARS_20M_DELAY"
+        ? "BLACKOUT"
+        : "LEO_REALTIME";
+
+    // If returning from blackout with queued packets, trigger animated sync
+    if (delayMode === "BLACKOUT" && queuedDossiers.length > 0) {
+      const count = queuedDossiers.length;
+      setSyncNotice(`🛰️ DSN CARRIER ACQUIRED: Syncing ${count} buffered dossiers to MCC-Houston... [Synced 100%]`);
+      setQueuedDossiers((prev) => prev.map((d) => ({ ...d, status: "SYNCED" })));
+      setTimeout(() => {
+        setSyncNotice(null);
+      }, 4000);
+    }
+
+    setDelayMode(nextMode);
+  };
+
+  // Live Fault Injection Handler
+  const handleInjectFault = (fault: "SENSOR_GLITCH" | "BP_DRIFT" | "SLEEP_DECLINE") => {
+    setActiveFault(fault);
+    setCrewDatasets((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      const targetCrewData = copy[activeCrew] as DailyHealthMetric[];
+      const metricIndex = currentSol - 1;
+
+      if (fault === "SENSOR_GLITCH") {
+        targetCrewData[metricIndex] = {
+          ...targetCrewData[metricIndex],
+          sensorConfidence: 18,
+          alertSuppressed: true,
+          heartRate: 35,
+          systolicBP: 186,
+          diastolicBP: 110,
+          confidenceReason: "Motion artifact detected • Lead displacement • Re-measure required",
+          eventTag: "INJECTED PERTURBATION: SENSOR LEAD DISPLACED // CONSERVATIVE ESCALATION",
+          injectedFault: "SENSOR_GLITCH",
+        };
+      } else if (fault === "BP_DRIFT") {
+        targetCrewData[metricIndex] = {
+          ...targetCrewData[metricIndex],
+          systolicBP: 146,
+          diastolicBP: 95,
+          heartRate: 92,
+          sensorConfidence: 96,
+          alertSuppressed: false,
+          confidenceReason: "High SNR • Sustained arterial elevation confirmed",
+          eventTag: "INJECTED PERTURBATION: ACUTE ARTERIAL DRIFT (+24 mmHg) // CUSUM S+ >= 5.0",
+          injectedFault: "BP_DRIFT",
+        };
+      } else if (fault === "SLEEP_DECLINE") {
+        targetCrewData[metricIndex] = {
+          ...targetCrewData[metricIndex],
+          sleepHours: 3.8,
+          moodScore: 4.1,
+          sensorConfidence: 95,
+          confidenceReason: "High SNR • Actigraphy sleep fragmentation confirmed",
+          eventTag: "INJECTED PERTURBATION: ACUTE SLEEP LOSS (3.8h) // CIRCADIAN MISALIGNMENT",
+          injectedFault: "SLEEP_DECLINE",
+        };
+      }
+
+      return copy;
+    });
+  };
+
+  // Reset injected fault back to baseline
+  const handleResetFault = () => {
+    setActiveFault("NONE");
+    setCrewDatasets((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      const original = INITIAL_CREW_DATASETS[activeCrew];
+      copy[activeCrew] = JSON.parse(JSON.stringify(original));
+      return copy;
+    });
+  };
+
+  // Re-measure protocol handler (clears motion artifact & confirms clean vitals)
+  const handleExecuteRemeasure = () => {
+    setCrewDatasets((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      const targetCrewData = copy[activeCrew] as DailyHealthMetric[];
+      const metricIndex = currentSol - 1;
+      targetCrewData[metricIndex] = {
+        ...targetCrewData[metricIndex],
+        sensorConfidence: 98,
+        alertSuppressed: false,
+        confidenceReason: "High SNR • Sensor re-seated • 5-min quiet rest verified",
+        eventTag: "RE-MEASURE VERIFIED // CONFIDENCE RESTORED TO 98%",
+        injectedFault: "NONE",
+      };
+      return copy;
+    });
+    setActiveFault("NONE");
+  };
+
+  const handleQueueDossier = (dossier: QueuedDossier) => {
+    setQueuedDossiers((prev) => [...prev, dossier]);
+  };
+
   return (
     <div className="min-h-screen text-slate-800 p-3 sm:p-5 flex flex-col justify-between font-sans select-none antialiased">
-      {/* APEX HEADER WITH MULTI-DISPLAY SELECTOR & DELAY-MODE TOGGLES */}
-      <header className="glass-card rounded-2xl px-5 py-3 flex flex-wrap items-center justify-between gap-3 mb-4 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+      {/* PERSISTENT CLINICAL DECISION SUPPORT DISCLAIMER BANNER */}
+      <div className="bg-amber-500/10 border border-amber-300/60 rounded-2xl px-4 py-2 mb-3 text-xs flex items-center justify-between gap-3 text-amber-900 shadow-sm">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+          <span className="leading-tight">
+            <strong>CLINICAL DECISION SUPPORT SYSTEM (CDS):</strong> For mission operational decision-support only. Not intended for autonomous clinical diagnosis. Defer all interventions to designated Flight Surgeon / CMO. Data is synthetic.
+          </span>
+        </div>
+        <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-200/60 text-amber-800 uppercase shrink-0">
+          Synthetic Telemetry
+        </span>
+      </div>
+
+      {/* SYNC NOTICE BANNER WHEN COMMS RESTORED */}
+      {syncNotice && (
+        <div className="bg-emerald-600 text-white rounded-2xl px-4 py-2.5 mb-3 text-xs font-semibold flex items-center justify-between gap-2 shadow-md animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+            <span>{syncNotice}</span>
+          </div>
+          <span className="text-[10px] bg-emerald-700 px-2 py-0.5 rounded-full font-bold">DSN Lock</span>
+        </div>
+      )}
+
+      {/* PROCEDURE COMPLETION TOAST */}
+      {procedureCompletionLog && (
+        <div className="bg-slate-900 text-white rounded-2xl px-4 py-2.5 mb-3 text-xs font-semibold flex items-center justify-between gap-2 shadow-lg border border-slate-700 animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-emerald-400" />
+            <span>{procedureCompletionLog}</span>
+          </div>
+          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold">
+            Verified Log
+          </span>
+        </div>
+      )}
+
+      {/* APEX HEADER WITH MULTI-DISPLAY SELECTOR & 3-WAY DELAY/BLACKOUT TOGGLE */}
+      <header className="glass-card rounded-2xl px-5 py-3 flex flex-wrap items-center justify-between gap-3 mb-3 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
         <div className="flex items-center gap-3.5">
           {/* AURORA APP ICON */}
           <div
@@ -159,15 +314,18 @@ export default function App() {
             <div className="flex items-center gap-2">
               <span className="font-bold text-slate-900 text-base tracking-tight">AEGIS</span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                Bio-Telemetry
+                Decision-Support
+              </span>
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                Synthetic
               </span>
             </div>
-            <p className="text-xs text-slate-400 font-medium">NASA Artemis & Deep-Space Health</p>
+            <p className="text-xs text-slate-400 font-medium">NASA Artemis & Deep-Space Health Deck</p>
           </div>
 
           <span className="hidden sm:inline text-slate-200 font-light mx-1">|</span>
 
-          {/* VIEW MODE TOGGLE (PC CONSOLE vs MOBILE vs WEARABLE) */}
+          {/* VIEW MODE TOGGLE */}
           <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-full border border-slate-200/80">
             <button
               onClick={() => setViewMode("EXPEDITION_CONSOLE")}
@@ -208,20 +366,39 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* DELAY-MODE TOGGLE */}
+          {/* 3-WAY DELAY / BLACKOUT MODE SELECTOR */}
           <button
-            onClick={() =>
-              setDelayMode(delayMode === "MARS_20M_DELAY" ? "LEO_REALTIME" : "MARS_20M_DELAY")
-            }
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition border ${
-              delayMode === "MARS_20M_DELAY"
+            onClick={cycleDelayMode}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition border active:scale-95 ${
+              delayMode === "BLACKOUT"
+                ? "bg-rose-50 text-rose-700 border-rose-300 animate-pulse"
+                : delayMode === "MARS_20M_DELAY"
                 ? "bg-amber-50 text-amber-700 border-amber-200"
                 : "bg-emerald-50 text-emerald-700 border-emerald-200"
             }`}
+            title="Click to cycle: LEO Real-Time -> Mars 20m Lag -> Communications Blackout"
           >
             <Radio className="w-3.5 h-3.5" />
-            <span>{delayMode === "MARS_20M_DELAY" ? "Mars 20m Lag" : "LEO Real-time"}</span>
+            <span>
+              {delayMode === "BLACKOUT"
+                ? "Blackout (0 kbps)"
+                : delayMode === "MARS_20M_DELAY"
+                ? "Mars 20m Lag"
+                : "LEO Real-time"}
+            </span>
           </button>
+
+          {/* QUEUED PACKETS PILL IF BUFFERED */}
+          {queuedDossiers.length > 0 && (
+            <div
+              onClick={() => setPacketOpen(true)}
+              className="flex items-center gap-1 bg-amber-100 border border-amber-300 text-amber-900 px-2.5 py-1.5 rounded-full text-xs font-bold cursor-pointer hover:bg-amber-200 transition"
+              title="Buffered dossiers pending downlink"
+            >
+              <Database className="w-3 h-3 text-amber-700" />
+              <span>{queuedDossiers.filter((d) => d.status === "QUEUED_LOCAL").length} Buffered</span>
+            </div>
+          )}
 
           {/* SANS OCULAR EXAM BUTTON */}
           <button
@@ -235,7 +412,13 @@ export default function App() {
           {/* PROCEDURE GUIDE BUTTON */}
           <button
             onClick={() => {
-              setActiveProcedure(currentTier === 2 ? "OCULAR_ULTRASOUND" : "LBNP_CHAPS");
+              setActiveProcedure(
+                currentTier === 2
+                  ? "OCULAR_ULTRASOUND"
+                  : selectedZone === "NEURO_BEHAVIORAL"
+                  ? "CIRCADIAN_LIGHTING"
+                  : "TIER1_REST_RECOVERY"
+              );
               setProcedureModalOpen(true);
             }}
             className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3.5 py-1.5 rounded-full text-xs font-semibold transition shadow-sm active:scale-95"
@@ -255,36 +438,34 @@ export default function App() {
         </div>
       </header>
 
-      {/* ========================================================================= */}
       {/* VIEWPORT 1: MOBILE COMM-PAD VIEW */}
-      {/* ========================================================================= */}
       {viewMode === "MOBILE_PAD" ? (
         <MobileView
           currentSol={currentSol}
           onSelectSol={setCurrentSol}
-          missionData={MOCK_30_DAY_MISSION}
+          missionData={activeMissionData}
           selectedZone={selectedZone}
           onSelectZone={setSelectedZone}
           zoneStatuses={zoneStatuses}
           currentTier={currentTier}
           delayMode={delayMode}
-          onToggleDelay={() =>
-            setDelayMode(delayMode === "MARS_20M_DELAY" ? "LEO_REALTIME" : "MARS_20M_DELAY")
-          }
+          onCycleDelay={cycleDelayMode}
           activeCrew={activeCrew}
-          onSelectCrew={(id) => setActiveCrew(id as CrewMemberId)}
-          crewRoster={crewRoster}
+          onSelectCrew={(id) => setActiveCrew(id)}
+          crewRoster={crewRoster.map((c) => ({
+            id: c.id,
+            name: c.name,
+            status: crewMeshStatusMap[c.id],
+          }))}
           onOpenSANS={() => setSansExamOpen(true)}
           onOpenProcedure={() => {
-            setActiveProcedure(currentTier === 2 ? "OCULAR_ULTRASOUND" : "LBNP_CHAPS");
+            setActiveProcedure(currentTier === 2 ? "OCULAR_ULTRASOUND" : "TIER1_REST_RECOVERY");
             setProcedureModalOpen(true);
           }}
           onOpenGroundPacket={() => setPacketOpen(true)}
         />
       ) : viewMode === "WEARABLE_WATCH_HUD" ? (
-        /* ========================================================================= */
         /* VIEWPORT 2: WEARABLE HUD */
-        /* ========================================================================= */
         <div className="flex-1 flex flex-col items-center justify-center p-2 mb-3">
           <WearableWatchHUD
             currentSol={currentSol}
@@ -294,7 +475,7 @@ export default function App() {
             zoneStatuses={zoneStatuses}
             onOpenSANS={() => setSansExamOpen(true)}
             onOpenProcedure={() => {
-              setActiveProcedure(currentTier === 2 ? "OCULAR_ULTRASOUND" : "LBNP_CHAPS");
+              setActiveProcedure(currentTier === 2 ? "OCULAR_ULTRASOUND" : "TIER1_REST_RECOVERY");
               setProcedureModalOpen(true);
             }}
             onSelectSol={setCurrentSol}
@@ -303,42 +484,55 @@ export default function App() {
           />
         </div>
       ) : (
-        /* ========================================================================= */
         /* VIEWPORT 3: PC EXPEDITION CONSOLE */
-        /* ========================================================================= */
         <div className="flex flex-col flex-1">
-          {/* MULTI-ASTRONAUT CREW MESH BAR */}
+          {/* MULTI-ASTRONAUT CREW MESH BAR (DYNAMIC STATS FROM DRIFT ENGINE) */}
           <section className="glass-card px-4 py-2.5 mb-3 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs shadow-sm">
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Crew Mesh:</span>
+              <span className="text-[10px] text-slate-400">Drift Engine Monitored</span>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {crewRoster.map((crew) => (
-                <button
-                  key={crew.id}
-                  onClick={() => setActiveCrew(crew.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs flex items-center gap-2 transition font-medium border ${
-                    activeCrew === crew.id
-                      ? "bg-slate-900 border-slate-900 text-white shadow-sm"
-                      : "bg-white/80 border-slate-200/80 text-slate-600 hover:border-slate-300"
-                  }`}
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      crew.status === "CRITICAL"
-                        ? "bg-rose-500 animate-pulse"
-                        : crew.status === "ATTENTION"
-                        ? "bg-amber-400"
-                        : "bg-emerald-500"
+              {crewRoster.map((crew) => {
+                const liveStatus = crewMeshStatusMap[crew.id];
+                return (
+                  <button
+                    key={crew.id}
+                    onClick={() => setActiveCrew(crew.id)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs flex items-center gap-2 transition font-medium border ${
+                      activeCrew === crew.id
+                        ? "bg-slate-900 border-slate-900 text-white shadow-sm"
+                        : "bg-white/80 border-slate-200/80 text-slate-600 hover:border-slate-300"
                     }`}
-                  />
-                  <span>{crew.name}</span>
-                  <span className="text-[11px] text-slate-400 font-normal">({crew.primaryAlert})</span>
-                </button>
-              ))}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        liveStatus === "CRITICAL"
+                          ? "bg-rose-500 animate-pulse"
+                          : liveStatus === "ATTENTION"
+                          ? "bg-amber-400"
+                          : "bg-emerald-500"
+                      }`}
+                    />
+                    <span>{crew.name}</span>
+                    <span className="text-[10px] opacity-75 font-normal">
+                      ({liveStatus})
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </section>
+
+          {/* FAULT INJECTION CONTROL BAR */}
+          <FaultInjectionBar
+            activeFault={activeFault}
+            onInject={handleInjectFault}
+            onReset={handleResetFault}
+            activeCrewName={crewRoster.find((c) => c.id === activeCrew)?.name || "CDR MILLER"}
+            currentSol={currentSol}
+          />
 
           {/* 30-DAY MISSION TIMELINE SCRUBBER */}
           <section className="glass-card p-4 mb-4 rounded-2xl shadow-sm">
@@ -357,14 +551,14 @@ export default function App() {
                 </span>
               </div>
 
-              {/* SCRIPTED EVENT JUMP PILLS */}
+              {/* EVENT JUMP PILLS */}
               <div className="flex flex-wrap gap-1.5 text-xs">
                 {[
                   { sol: 1, label: "Sol 1: Baseline" },
-                  { sol: 8, label: "Sol 8: Glitch" },
+                  { sol: 8, label: "Sol 8: Glitch (Motion Artifact)" },
                   { sol: 18, label: "Sol 18: Sleep Loss" },
-                  { sol: 23, label: "Sol 23: BP Spike" },
-                  { sol: 28, label: "Sol 28: Dossier" },
+                  { sol: 23, label: "Sol 23: Elevated BP" },
+                  { sol: 28, label: "Sol 28: Ground Dossier" },
                 ].map((preset) => (
                   <button
                     key={preset.sol}
@@ -400,7 +594,7 @@ export default function App() {
 
           {/* MAIN 3-COLUMN CLINICAL WORKSTATION */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 mb-3">
-            {/* COLUMN 1: ANATOMICAL DISPLAY (3 COLS) */}
+            {/* COLUMN 1: ANATOMICAL DISPLAY (4 COLS) */}
             <div className="lg:col-span-4 flex flex-col">
               <div className="flex items-center justify-between mb-2 px-1">
                 <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
@@ -448,6 +642,7 @@ export default function App() {
                   onSelectZone={setSelectedZone}
                   selectedZone={selectedZone}
                   activeCrewName={crewRoster.find((c) => c.id === activeCrew)?.name}
+                  activeCrewId={activeCrew}
                 />
               ) : consoleLeftMode === "BODY_MAP" ? (
                 <BodyMap
@@ -469,12 +664,14 @@ export default function App() {
               )}
             </div>
 
-            {/* COLUMN 2: INDICATOR DETAIL (4 COLS) */}
+            {/* COLUMN 2: INDICATOR DETAIL & DRIFT REASONING (4 COLS) */}
             <div className="lg:col-span-4">
               <IndicatorDetail
                 currentSol={currentSol}
-                missionData={MOCK_30_DAY_MISSION}
+                missionData={activeMissionData}
                 selectedZone={selectedZone}
+                activeCrewId={activeCrew}
+                onExecuteRemeasure={handleExecuteRemeasure}
               />
             </div>
 
@@ -484,25 +681,36 @@ export default function App() {
                 currentTier={currentTier}
                 delayMode={delayMode}
                 onTriggerAction={(tier) => {
-                  setActiveProcedure(tier === 2 ? "OCULAR_ULTRASOUND" : "LBNP_CHAPS");
+                  setActiveProcedure(
+                    tier === 2
+                      ? "OCULAR_ULTRASOUND"
+                      : selectedZone === "NEURO_BEHAVIORAL"
+                      ? "CIRCADIAN_LIGHTING"
+                      : "TIER1_REST_RECOVERY"
+                  );
                   setProcedureModalOpen(true);
                 }}
                 onOpenGroundPacket={() => setPacketOpen(true)}
+                conservativeEscalationActive={conservativeEscalationActive}
+                onExecuteRemeasure={handleExecuteRemeasure}
+                queuedPacketsCount={queuedDossiers.length}
               />
             </div>
           </div>
         </div>
       )}
 
-      {/* FOOTER */}
-      <footer className="glass-card rounded-2xl px-5 py-3 flex flex-wrap items-center justify-between text-xs text-slate-400 shadow-sm mt-auto">
+      {/* FOOTER WITH COMPREHENSIVE DISCLAIMER */}
+      <footer className="glass-card rounded-2xl px-5 py-3 flex flex-wrap items-center justify-between text-xs text-slate-400 shadow-sm mt-auto gap-2">
         <div className="flex items-center gap-3">
           <span>Active Operator: <strong className="text-slate-800 font-semibold">{activeCrew.replace("_", " ")}</strong></span>
           <span className="text-slate-200">|</span>
           <span>Display Profile: <strong className="text-indigo-600 font-semibold">{viewMode}</strong></span>
+          <span className="text-slate-200">|</span>
+          <span>Engine: <strong className="text-slate-700 font-semibold">CUSUM + EWMA Live Drift</strong></span>
         </div>
         <div>
-          <span>NASA Human Research Program (HRP) Compliant • Artemis Deep-Space System</span>
+          <span>NASA Human Research Program (HRP) Compliant • Decision-Support Only • Synthetic Data</span>
         </div>
       </footer>
 
@@ -511,7 +719,10 @@ export default function App() {
         isOpen={packetOpen}
         onClose={() => setPacketOpen(false)}
         currentSol={currentSol}
-        missionData={MOCK_30_DAY_MISSION}
+        missionData={activeMissionData}
+        activeCrewId={activeCrew}
+        delayMode={delayMode}
+        onQueueDossier={handleQueueDossier}
       />
 
       <SANSExamModal
@@ -527,8 +738,9 @@ export default function App() {
         isOpen={procedureModalOpen}
         onClose={() => setProcedureModalOpen(false)}
         procedureType={activeProcedure}
-        onComplete={() => {
-          alert("Procedure completed and logged to mission medical telemetry.");
+        onComplete={(title) => {
+          setProcedureCompletionLog(`Logged: ${title} on Sol ${currentSol}`);
+          setTimeout(() => setProcedureCompletionLog(null), 4000);
         }}
       />
     </div>

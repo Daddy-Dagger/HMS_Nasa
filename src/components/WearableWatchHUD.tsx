@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AnatomicalZone, HealthStatus, DailyHealthMetric } from "../types/mission";
+import { AnatomicalZone, HealthStatus, DailyHealthMetric, CommsMode } from "../types/mission";
 import { ConstellationGlyph } from "./ConstellationGlyph";
 import { Activity, Heart, Moon, Eye, ShieldAlert, Circle, Square, Radio, Thermometer, Wind } from "lucide-react";
 
@@ -13,7 +13,7 @@ interface WearableWatchHUDProps {
   onOpenProcedure: () => void;
   onSelectSol?: (sol: number) => void;
   activeCrewName?: string;
-  delayMode?: "LEO_REALTIME" | "MARS_20M_DELAY";
+  delayMode?: CommsMode;
 }
 
 export const WearableWatchHUD: React.FC<WearableWatchHUDProps> = ({
@@ -24,7 +24,6 @@ export const WearableWatchHUD: React.FC<WearableWatchHUDProps> = ({
   zoneStatuses,
   onOpenSANS,
   onOpenProcedure,
-  onSelectSol,
   activeCrewName = "CDR Miller",
   delayMode = "MARS_20M_DELAY",
 }) => {
@@ -65,7 +64,6 @@ export const WearableWatchHUD: React.FC<WearableWatchHUDProps> = ({
       {/* 1. RECTANGULAR CUFF HUD */}
       {deviceShape === "RECTANGULAR" ? (
         <div className="relative w-[340px] sm:w-[380px] bg-slate-950 text-white rounded-[36px] p-5 shadow-[0_20px_50px_rgba(15,23,42,0.25)] border-[6px] border-slate-800 flex flex-col justify-between overflow-hidden">
-          {/* Subtle glass reflection */}
           <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-white/10 to-transparent pointer-events-none rounded-t-[30px]" />
 
           {/* TOP MISSION BANNER */}
@@ -78,9 +76,11 @@ export const WearableWatchHUD: React.FC<WearableWatchHUDProps> = ({
               <span className="text-indigo-400 font-bold bg-indigo-950/80 px-2.5 py-0.5 rounded-full border border-indigo-800 text-[11px]">
                 Sol {currentSol}
               </span>
-              <span className="text-amber-400 text-[10px] flex items-center gap-1">
+              <span className={`text-[10px] flex items-center gap-1 font-semibold ${
+                delayMode === "BLACKOUT" ? "text-rose-400 animate-pulse" : "text-amber-400"
+              }`}>
                 <Radio className="w-2.5 h-2.5" />
-                {delayMode === "MARS_20M_DELAY" ? "20m lag" : "Real"}
+                {delayMode === "BLACKOUT" ? "Blackout" : delayMode === "MARS_20M_DELAY" ? "20m Lag" : "Real"}
               </span>
             </div>
           </div>
@@ -200,70 +200,45 @@ export const WearableWatchHUD: React.FC<WearableWatchHUDProps> = ({
                 <Thermometer className="w-3.5 h-3.5 text-amber-400" />
                 <span>Core</span>
               </span>
-              <span className="font-semibold text-slate-200">37.1 °C</span>
+              <span className="font-semibold text-slate-200">{currentMetric.bodyTemp}°C</span>
             </div>
           </div>
 
-          {/* SOL JUMPER */}
-          {onSelectSol && (
-            <div className="flex items-center justify-between gap-1 mb-2.5 text-[9px]">
-              {[1, 8, 16, 23, 28].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => onSelectSol(s)}
-                  className={`flex-1 py-1 rounded-lg border transition font-medium ${
-                    currentSol === s
-                      ? "bg-indigo-600 border-indigo-500 text-white"
-                      : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
-                  }`}
-                >
-                  S{s}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* ACTION BUTTONS */}
-          <div className="flex gap-2">
-            <button
-              onClick={onOpenProcedure}
-              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 shadow-md"
-            >
-              <Activity className="w-3.5 h-3.5" />
-              <span>Procedure</span>
-            </button>
-
+          {/* QUICK ACTION BUTTONS */}
+          <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-800">
             <button
               onClick={onOpenSANS}
-              className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 shadow-md"
+              className="py-2 px-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 shadow-sm"
             >
               <Eye className="w-3.5 h-3.5" />
               <span>SANS Exam</span>
             </button>
+            <button
+              onClick={onOpenProcedure}
+              className="py-2 px-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 shadow-sm"
+            >
+              <Activity className="w-3.5 h-3.5" />
+              <span>Protocol</span>
+            </button>
+          </div>
+
+          <div className="text-[9px] text-slate-500 text-center mt-2">
+            Synthetic Telemetry • Decision-Support Only
           </div>
         </div>
       ) : (
-        /* 2. CIRCULAR BEZEL MODE */
-        <div className="relative w-80 sm:w-96 aspect-square rounded-full bg-slate-950 text-white border-[8px] border-slate-800 p-6 shadow-[0_20px_50px_rgba(15,23,42,0.25)] flex flex-col justify-between items-center overflow-hidden">
-          <div className="absolute inset-3 rounded-full border border-slate-800 pointer-events-none" />
+        /* 2. CIRCULAR BEZEL HUD */
+        <div className="relative w-[340px] h-[340px] bg-slate-950 text-white rounded-full p-6 shadow-[0_25px_60px_rgba(15,23,42,0.35)] border-[8px] border-slate-800 flex flex-col items-center justify-between overflow-hidden">
+          <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-indigo-950/20 via-transparent to-rose-950/20 pointer-events-none" />
 
-          {/* TOP CURVED STATUS */}
-          <div className="flex flex-col items-center text-center pt-1 z-10">
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="font-semibold text-white">{activeCrewName}</span>
-              <span className="text-slate-600">•</span>
-              <span className="text-indigo-400 font-semibold">Sol {currentSol}</span>
-            </div>
-            {isCriticalBP && (
-              <span className="text-[9px] text-rose-400 font-semibold mt-0.5 animate-pulse">
-                Critical BP Drift
-              </span>
-            )}
+          {/* TOP TIME & CREW */}
+          <div className="flex flex-col items-center pt-2 z-10">
+            <span className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">{activeCrewName}</span>
+            <span className="text-xs font-bold text-indigo-400">Sol {currentSol} / 30</span>
           </div>
 
-          {/* CENTER 7-DOT GLYPH */}
-          <div className="relative my-auto flex flex-col items-center justify-center scale-90">
+          {/* CENTER: CONSTELLATION GLYPH */}
+          <div className="relative z-10 scale-95 transform -translate-y-1">
             <ConstellationGlyph
               selectedZone={selectedZone}
               onSelectZone={onSelectZone}
@@ -272,33 +247,25 @@ export const WearableWatchHUD: React.FC<WearableWatchHUDProps> = ({
             />
           </div>
 
-          {/* BOTTOM QUICK VITALS & ACTION BUTTONS */}
-          <div className="flex flex-col items-center w-full z-10 pb-1">
-            <div className="flex items-center justify-center gap-3 text-xs mb-2.5 px-4 py-1.5 bg-slate-900 border border-slate-800 rounded-full">
-              <span className="text-rose-400 font-semibold">
+          {/* BOTTOM VITALS SUMMARY */}
+          <div className="flex items-center gap-4 pb-2 z-10 text-xs">
+            <div className="text-center">
+              <span className="text-[9px] text-slate-400 block">BP</span>
+              <span className={`font-bold ${isCriticalBP ? "text-rose-400" : "text-white"}`}>
                 {currentMetric.systolicBP}/{currentMetric.diastolicBP}
               </span>
-              <span className="text-slate-600">•</span>
-              <span className="text-emerald-400 font-semibold">{currentMetric.heartRate} bpm</span>
-              <span className="text-slate-600">•</span>
-              <span className="text-indigo-400 font-semibold">{currentMetric.sleepHours}h</span>
             </div>
-
-            <div className="flex gap-2 w-full px-4">
-              <button
-                onClick={onOpenProcedure}
-                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-semibold flex items-center justify-center gap-1 transition"
-              >
-                <Activity className="w-3.5 h-3.5" />
-                <span>LBNP</span>
-              </button>
-              <button
-                onClick={onOpenSANS}
-                className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-semibold flex items-center justify-center gap-1 transition"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>SANS</span>
-              </button>
+            <div className="w-px h-6 bg-slate-800" />
+            <div className="text-center">
+              <span className="text-[9px] text-slate-400 block">HR</span>
+              <span className="font-bold text-emerald-400">{currentMetric.heartRate}</span>
+            </div>
+            <div className="w-px h-6 bg-slate-800" />
+            <div className="text-center">
+              <span className="text-[9px] text-slate-400 block">Sleep</span>
+              <span className={`font-bold ${isWarnSleep ? "text-amber-400" : "text-indigo-400"}`}>
+                {currentMetric.sleepHours}h
+              </span>
             </div>
           </div>
         </div>

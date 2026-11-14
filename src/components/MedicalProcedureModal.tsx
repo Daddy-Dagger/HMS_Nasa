@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { CheckCircle2, ChevronRight, ChevronLeft, ShieldCheck, Activity, Wind, Eye, X } from "lucide-react";
+import { CheckCircle2, ChevronRight, ChevronLeft, Activity, X } from "lucide-react";
+
+export type ProcedureTypeId = "TIER1_REST_RECOVERY" | "LBNP_CHAPS" | "OCULAR_ULTRASOUND" | "CIRCADIAN_LIGHTING";
 
 interface MedicalProcedureModalProps {
   isOpen: boolean;
   onClose: () => void;
-  procedureType: "LBNP_CHAPS" | "OCULAR_ULTRASOUND" | "CIRCADIAN_LIGHTING";
-  onComplete: () => void;
+  procedureType: ProcedureTypeId;
+  onComplete: (procedureTitle: string) => void;
 }
 
 export const MedicalProcedureModal: React.FC<MedicalProcedureModalProps> = ({
@@ -17,6 +19,14 @@ export const MedicalProcedureModal: React.FC<MedicalProcedureModalProps> = ({
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [timerRunning, setTimerRunning] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number>(15);
+  const [isCompleted, setIsCompleted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setCurrentStep(1);
+    setIsCompleted(false);
+    setTimerRunning(false);
+    setCountdown(15);
+  }, [procedureType, isOpen]);
 
   useEffect(() => {
     let interval: any = null;
@@ -32,6 +42,32 @@ export const MedicalProcedureModal: React.FC<MedicalProcedureModalProps> = ({
 
   const getProcedureData = () => {
     switch (procedureType) {
+      case "TIER1_REST_RECOVERY":
+        return {
+          title: "Tier 1: Protocol Re-Measure & Decompression",
+          hazard: "Autonomic Dysregulation (Contributing factors under review)",
+          totalSteps: 3,
+          steps: [
+            {
+              title: "Step 1: Protocol Re-Measure & Lead Verification",
+              graphic: "RE_MEASURE",
+              instruction: "Seat astronaut comfortably with arm supported at heart level. Check electrode contact impedance. Maintain 5 minutes of quiet rest before initiating verified oscillometric reading.",
+              check: "Motion artifact cleared • 5-minute seated rest verified.",
+            },
+            {
+              title: "Step 2: Passive Decompression & Environmental Shielding",
+              graphic: "PASSIVE_REST",
+              instruction: "Escort astronaut to individual crew quarters. Dim local lighting to 2100K recovery amber (<10 lux). Reduce communication chatter and eliminate non-essential work tasks.",
+              check: "Quarters secured • 2100K circadian spectrum active.",
+            },
+            {
+              title: "Step 3: Hydration Check & 60-Minute Follow-Up",
+              graphic: "HYDRATION_CHECK",
+              instruction: "Verify nominal oral hydration balance (Note: acute fluid loading and salt tablets are contraindicated for BP elevation). Schedule repeat BP check at T+60 min. If systolic remains >140 mmHg, escalate to Tier 2 CMO protocol.",
+              check: "Hydration balance logged • T+60 min re-evaluation timer armed.",
+            },
+          ],
+        };
       case "OCULAR_ULTRASOUND":
         return {
           title: "In-Flight Ocular Ultrasound (ONSD Protocol)",
@@ -54,7 +90,7 @@ export const MedicalProcedureModal: React.FC<MedicalProcedureModalProps> = ({
               title: "Step 3: Electronic Caliper Measurement",
               graphic: "CALIPER_MEASURE",
               instruction: "Place electronic calipers on internal hyperechoic margins of optic nerve sheath. Record three consecutive measurements.",
-              check: "ONSD measured: 5.6 mm (Normal <5.8 mm). Retinal edema rule-out logged.",
+              check: "ONSD measured: 5.6 mm (Threshold >5.8 mm). Retinal edema rule-out logged.",
             },
           ],
         };
@@ -82,7 +118,7 @@ export const MedicalProcedureModal: React.FC<MedicalProcedureModalProps> = ({
       default:
         return {
           title: "Lower Body Negative Pressure (LBNP Chaps)",
-          hazard: "Cephalic Fluid Shift & Spaceflight Hypertension",
+          hazard: "Cephalic Fluid Shift & SANS Orthostatic Conditioning",
           totalSteps: 3,
           steps: [
             {
@@ -94,14 +130,14 @@ export const MedicalProcedureModal: React.FC<MedicalProcedureModalProps> = ({
             {
               title: "Step 2: Engage Vacuum (-35 mmHg for 30m)",
               graphic: "PRESSURE_GAUGE",
-              instruction: "Power on habitat vacuum regulator. Ramp negative pressure to -35 mmHg at 5 mmHg/sec. Monitor heart rate for vasovagal pre-syncope.",
-              check: "Target pressure -35 mmHg reached • Venous blood pooled to lower extremities.",
+              instruction: "Power on habitat vacuum regulator. Ramp negative pressure to -35 mmHg at 5 mmHg/sec. Venous blood pools caudally to simulate 1-G gravity gradient. (Note: contraindicated for acute BP elevation).",
+              check: "Target pressure -35 mmHg reached • Caudal fluid shift active.",
             },
             {
-              title: "Step 3: Oral Electrolyte Fluid Loading",
+              title: "Step 3: Post-LBNP Orthostatic Assessment",
               graphic: "FLUID_PACK",
-              instruction: "Consume 1.0L isotonic saline solution (or 8x 1g NaCl salt tablets with 1000 mL H2O) during final 10 minutes of suction.",
-              check: "1.0L fluid loading complete • Plasma volume restored to nominal baseline.",
+              instruction: "Following suction ramp-down, perform orthostatic vital check (heart rate and blood pressure). Log crew comfort and tolerance.",
+              check: "LBNP countermeasure cycle complete • Orthostatic stability verified.",
             },
           ],
         };
@@ -115,8 +151,8 @@ export const MedicalProcedureModal: React.FC<MedicalProcedureModalProps> = ({
     if (currentStep < proc.totalSteps) {
       setCurrentStep(currentStep + 1);
     } else {
-      onComplete();
-      onClose();
+      setIsCompleted(true);
+      onComplete(proc.title);
     }
   };
 
@@ -130,10 +166,15 @@ export const MedicalProcedureModal: React.FC<MedicalProcedureModalProps> = ({
               <Activity className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-semibold text-slate-900 text-sm">
-                Clinical Procedure Guide
-              </h3>
-              <p className="text-xs text-slate-400 font-medium">Step-by-Step Countermeasure</p>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-slate-900 text-sm">
+                  Clinical Procedure Guide
+                </h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                  Decision-Support
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 font-medium">NASA HRP Standard Operating Procedure</p>
             </div>
           </div>
           <button
@@ -144,126 +185,91 @@ export const MedicalProcedureModal: React.FC<MedicalProcedureModalProps> = ({
           </button>
         </div>
 
-        {/* PROGRESS */}
-        <div>
-          <div className="flex justify-between items-center text-xs text-slate-500 mb-1.5 font-medium">
-            <span className="font-semibold text-slate-800">{proc.title}</span>
-            <span className="text-indigo-600 font-semibold">Step {currentStep} of {proc.totalSteps}</span>
+        {/* COMPLETED STATE */}
+        {isCompleted ? (
+          <div className="p-6 text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <h4 className="font-bold text-slate-900 text-base">Procedure Logged Successfully</h4>
+            <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+              <strong>{proc.title}</strong> has been executed according to NASA protocol and recorded in the mission medical telemetry log.
+            </p>
+            <div className="pt-2">
+              <button
+                onClick={onClose}
+                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-full shadow-md transition active:scale-95"
+              >
+                Close & Return to Workstation
+              </button>
+            </div>
           </div>
-          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden flex gap-1 p-0.5">
-            {Array.from({ length: proc.totalSteps }).map((_, i) => (
-              <div
-                key={i}
-                className={`flex-1 h-full rounded-full transition-all ${
-                  i + 1 <= currentStep ? "bg-indigo-600" : "bg-transparent"
+        ) : (
+          <>
+            {/* PROGRESS BAR */}
+            <div>
+              <div className="flex justify-between items-center text-xs text-slate-500 mb-1.5 font-medium">
+                <span className="font-semibold text-slate-800">{proc.title}</span>
+                <span>
+                  Step {currentStep} of {proc.totalSteps}
+                </span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                  style={{ width: `${(currentStep / proc.totalSteps) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* TARGET HAZARD BADGE */}
+            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+              <span className="text-slate-500 font-medium">Targeted Hazard:</span>
+              <span className="font-semibold text-indigo-700">{proc.hazard}</span>
+            </div>
+
+            {/* STEP CONTENT */}
+            <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-100 space-y-3">
+              <span className="font-bold text-slate-900 text-sm block">
+                {currentStepData.title}
+              </span>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                {currentStepData.instruction}
+              </p>
+
+              {/* VERIFICATION CHECK */}
+              <div className="p-2.5 bg-white rounded-xl border border-emerald-100 text-emerald-800 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="font-medium text-[11px]">{currentStepData.check}</span>
+              </div>
+            </div>
+
+            {/* NAVIGATION BUTTONS */}
+            <div className="flex items-center justify-between pt-2">
+              <button
+                onClick={() => currentStep > 1 && setCurrentStep(currentStep - 1)}
+                disabled={currentStep === 1}
+                className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition ${
+                  currentStep === 1
+                    ? "opacity-40 cursor-not-allowed text-slate-400"
+                    : "bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-95"
                 }`}
-              />
-            ))}
-          </div>
-        </div>
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Previous</span>
+              </button>
 
-        {/* ANIMATED STEP GRAPHIC */}
-        <div className="aspect-[16/7] bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-          {currentStepData.graphic === "LBNP_DONNING" && (
-            <div className="relative flex flex-col items-center animate-pulse">
-              <Wind className="w-10 h-10 text-indigo-600 mb-1" />
-              <div className="px-3 py-1 bg-white border border-indigo-200 rounded-full text-xs text-indigo-700 font-semibold shadow-sm">
-                Pneumatic Seal Locked
-              </div>
+              <button
+                onClick={handleNext}
+                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-xs font-semibold flex items-center gap-1.5 transition shadow-sm active:scale-95"
+              >
+                <span>{currentStep === proc.totalSteps ? "Complete & Log Procedure" : "Confirm & Proceed"}</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
-          )}
-
-          {currentStepData.graphic === "PRESSURE_GAUGE" && (
-            <div className="relative flex flex-col items-center">
-              <div className="w-20 h-20 rounded-full border-4 border-dashed border-indigo-500 flex items-center justify-center animate-spin duration-1000 bg-white shadow-sm">
-                <span className="text-xl font-bold text-slate-900">-35</span>
-              </div>
-              <span className="text-xs text-indigo-600 mt-2 font-semibold">mmHg Vacuum Active</span>
-            </div>
-          )}
-
-          {currentStepData.graphic === "FLUID_PACK" && (
-            <div className="flex items-center gap-3">
-              <div className="w-14 h-20 bg-emerald-50 border-2 border-emerald-400 rounded-2xl flex flex-col items-center justify-center text-xs text-emerald-700 font-bold shadow-sm">
-                <ShieldCheck className="w-6 h-6 text-emerald-600 mb-1" />
-                <span>1.0L NaCl</span>
-              </div>
-              <div className="text-xs text-slate-600 space-y-1">
-                <div className="font-semibold text-slate-800">• 8x 1g Salt Tablets</div>
-                <div>• Plasma Volume Restored</div>
-              </div>
-            </div>
-          )}
-
-          {currentStepData.graphic === "ULTRASOUND_GEL" && (
-            <div className="flex flex-col items-center animate-pulse">
-              <Eye className="w-10 h-10 text-indigo-600 mb-1" />
-              <span className="text-xs text-indigo-700 font-semibold">Acoustic Probe Coupled</span>
-            </div>
-          )}
-
-          {currentStepData.graphic === "AXIAL_SCAN" && (
-            <div className="flex items-center gap-2">
-              <div className="px-4 py-2 bg-white rounded-xl border border-indigo-200 text-xs text-indigo-700 font-bold shadow-sm">
-                Depth: 3.0 mm
-              </div>
-              <span className="text-xs text-slate-500 font-medium">Retrobulbar Scan</span>
-            </div>
-          )}
-
-          {currentStepData.graphic === "CALIPER_MEASURE" && (
-            <div className="flex flex-col items-center">
-              <div className="text-2xl font-bold text-slate-900">ONSD: 5.6 mm</div>
-              <span className="text-xs text-emerald-600 font-semibold mt-1">Threshold: 5.8 mm (Nominal)</span>
-            </div>
-          )}
-
-          {currentStepData.graphic === "LIGHT_SPECTRUM" && (
-            <div className="flex flex-col items-center animate-pulse">
-              <div className="w-12 h-12 rounded-full bg-amber-400/30 border-2 border-amber-500 flex items-center justify-center text-amber-700 font-bold text-sm mb-1">
-                2100K
-              </div>
-              <span className="text-xs text-amber-700 font-semibold">Blue-Depleted Spectrum Active</span>
-            </div>
-          )}
-
-          {currentStepData.graphic === "MELATONIN_DOSE" && (
-            <div className="flex flex-col items-center">
-              <div className="text-base font-bold text-slate-900">0.5 mg Melatonin Micro-Dose</div>
-              <span className="text-xs text-slate-400 mt-1">Circadian phase advance initiated</span>
-            </div>
-          )}
-        </div>
-
-        {/* STEP INSTRUCTION BOX */}
-        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 text-xs">
-          <span className="font-semibold text-slate-900 block text-sm">{currentStepData.title}</span>
-          <p className="text-slate-600 leading-relaxed">{currentStepData.instruction}</p>
-          <div className="pt-1.5 flex items-center gap-1.5 text-emerald-600 font-semibold text-xs border-t border-slate-200/60">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{currentStepData.check}</span>
-          </div>
-        </div>
-
-        {/* CONTROLS */}
-        <div className="flex justify-between items-center pt-1">
-          <button
-            onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
-            disabled={currentStep === 1}
-            className="px-4 py-2 rounded-full text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-30 transition flex items-center gap-1"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span>Previous</span>
-          </button>
-
-          <button
-            onClick={handleNext}
-            className="px-5 py-2.5 rounded-full text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-md active:scale-95 transition flex items-center gap-1.5"
-          >
-            <span>{currentStep === proc.totalSteps ? "Complete & Log Protocol" : "Next Step"}</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

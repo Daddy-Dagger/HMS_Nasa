@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AnatomicalZone, HealthStatus, EscalationTier, DailyHealthMetric } from "../types/mission";
+import { AnatomicalZone, HealthStatus, EscalationTier, DailyHealthMetric, CommsMode, CrewMemberId } from "../types/mission";
 import { BodyScanView } from "./BodyScanView";
 import { IndicatorDetail } from "./IndicatorDetail";
 import { EscalationLadder } from "./EscalationLadder";
@@ -14,6 +14,7 @@ import {
   Scan,
   BarChart3,
   Layers,
+  Radio,
 } from "lucide-react";
 
 interface MobileViewProps {
@@ -24,11 +25,11 @@ interface MobileViewProps {
   onSelectZone: (zone: AnatomicalZone) => void;
   zoneStatuses: Record<AnatomicalZone, HealthStatus>;
   currentTier: EscalationTier;
-  delayMode: "LEO_REALTIME" | "MARS_20M_DELAY";
-  onToggleDelay: () => void;
-  activeCrew: string;
-  onSelectCrew: (crewId: string) => void;
-  crewRoster: Array<{ id: string; name: string; status: HealthStatus; primaryAlert?: string }>;
+  delayMode: CommsMode;
+  onCycleDelay: () => void;
+  activeCrew: CrewMemberId;
+  onSelectCrew: (crewId: CrewMemberId) => void;
+  crewRoster: Array<{ id: CrewMemberId; name: string; status: HealthStatus; primaryAlert?: string }>;
   onOpenSANS: () => void;
   onOpenProcedure: () => void;
   onOpenGroundPacket: () => void;
@@ -43,7 +44,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
   zoneStatuses,
   currentTier,
   delayMode,
-  onToggleDelay,
+  onCycleDelay,
   activeCrew,
   onSelectCrew,
   crewRoster,
@@ -67,10 +68,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
         fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
-      {/* CLEAN TOP HEADER */}
-      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-200/60 px-4 py-3 flex items-center justify-between">
+      {/* TOP HEADER */}
+      <div className="sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-gray-200/60 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          {/* Aurora icon */}
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm"
             style={{ background: "linear-gradient(135deg, #c4b5fd, #fda4af, #93c5fd)" }}
@@ -78,21 +78,32 @@ export const MobileView: React.FC<MobileViewProps> = ({
             <span className="text-white text-xs font-bold">A</span>
           </div>
           <div>
-            <span className="font-semibold text-gray-900 text-sm">AEGIS</span>
-            <span className="text-xs text-gray-400 ml-1.5 font-medium">Sol {currentSol}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-gray-900 text-sm">AEGIS</span>
+              <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                Decision-Support
+              </span>
+            </div>
+            <span className="text-xs text-gray-400 font-medium">Sol {currentSol} • Synthetic Data</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {/* 3-WAY COMMS TOGGLE */}
           <button
-            onClick={onToggleDelay}
-            className={`text-[10px] font-medium px-2.5 py-1 rounded-full border transition ${
-              delayMode === "MARS_20M_DELAY"
+            onClick={onCycleDelay}
+            className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border transition flex items-center gap-1 ${
+              delayMode === "BLACKOUT"
+                ? "bg-rose-50 border-rose-300 text-rose-700 animate-pulse"
+                : delayMode === "MARS_20M_DELAY"
                 ? "bg-amber-50 border-amber-200 text-amber-700"
                 : "bg-emerald-50 border-emerald-200 text-emerald-700"
             }`}
           >
-            {delayMode === "MARS_20M_DELAY" ? "20m lag" : "Real-time"}
+            <Radio className="w-2.5 h-2.5" />
+            <span>
+              {delayMode === "BLACKOUT" ? "Blackout" : delayMode === "MARS_20M_DELAY" ? "20m Lag" : "Real-time"}
+            </span>
           </button>
           <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-bold shadow-sm">
             {activeCrewInfo?.name?.charAt(4) || "M"}
@@ -100,7 +111,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         </div>
       </div>
 
-      {/* CREW SELECTOR — horizontal pills */}
+      {/* CREW SELECTOR */}
       <div className="flex items-center gap-2 overflow-x-auto py-2.5 px-4 scrollbar-hide">
         {crewRoster.map((crew) => (
           <button
@@ -115,7 +126,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
             <span
               className={`w-1.5 h-1.5 rounded-full ${
                 crew.status === "CRITICAL"
-                  ? "bg-red-500 animate-pulse"
+                  ? "bg-rose-500 animate-pulse"
                   : crew.status === "ATTENTION"
                   ? "bg-amber-500"
                   : "bg-emerald-500"
@@ -138,18 +149,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
 
         <div className="flex flex-col items-center">
           <span className="text-sm font-semibold text-gray-900">
-            Mission Day <span className="text-indigo-600">{currentSol}</span>
+            Mission Day <span className="text-indigo-600">{currentSol}</span> / 30
           </span>
-          <span className="text-[11px] text-gray-400 font-medium">
-            {currentSol <= 7
-              ? "Adaptation baseline"
-              : currentSol === 8
-              ? "Sensor glitch"
-              : currentSol <= 21
-              ? "Sleep fragmentation"
-              : currentSol <= 24
-              ? "Critical BP spike"
-              : "Stabilization"}
+          <span className="text-[10px] text-gray-400 font-medium">
+            {currentMetric.eventTag ? currentMetric.eventTag.slice(0, 32) + "..." : "Nominal telemetry"}
           </span>
         </div>
 
@@ -162,14 +165,14 @@ export const MobileView: React.FC<MobileViewProps> = ({
         </button>
       </div>
 
-      {/* TAB BAR — clean pills */}
+      {/* TAB BAR */}
       <div className="flex items-center gap-1.5 px-4 py-1.5">
         {(
           [
-            { key: "SCAN", icon: Scan, label: "Body scan" },
+            { key: "SCAN", icon: Scan, label: "Scan" },
             { key: "DASHBOARD", icon: Heart, label: "Vitals" },
             { key: "CHARTS", icon: BarChart3, label: "Trends" },
-            { key: "TIERS", icon: Layers, label: "Escalation" },
+            { key: "TIERS", icon: Layers, label: "Tiers" },
           ] as const
         ).map((tab) => (
           <button
@@ -189,7 +192,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
 
       {/* MAIN CONTENT */}
       <div className="px-2 flex-1 mt-1">
-        {/* TAB 1: BODY SCAN — the hero view */}
         {activeTab === "SCAN" && (
           <BodyScanView
             currentMetric={currentMetric}
@@ -198,10 +200,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
             onSelectZone={onSelectZone}
             selectedZone={selectedZone}
             activeCrewName={activeCrewInfo?.name}
+            activeCrewId={activeCrew}
           />
         )}
 
-        {/* TAB 2: VITALS DASHBOARD — clean cards */}
         {activeTab === "DASHBOARD" && (
           <div className="px-2 space-y-3">
             <h2 className="text-lg font-semibold text-gray-900 pt-2">
@@ -209,7 +211,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <span className="text-gray-400 font-normal text-sm ml-2">Sol {currentSol}</span>
             </h2>
 
-            {/* RECOVERY SCORE CARD */}
             <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 border border-gray-200/60 shadow-sm">
               <span className="text-xs text-gray-500 font-medium">Recovery score</span>
               <div className="flex items-center justify-between mt-1">
@@ -255,7 +256,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
               </div>
             </div>
 
-            {/* 2x1 VITAL CARDS */}
             <div className="grid grid-cols-2 gap-3">
               <div
                 onClick={() => onSelectZone("CARDIOVASCULAR")}
@@ -272,7 +272,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   {currentMetric.systolicBP}
                   <span className="text-sm text-gray-400">/{currentMetric.diastolicBP}</span>
                 </span>
-                <span className="text-[10px] text-gray-400 block mt-0.5">mmHg</span>
+                <span className="text-[10px] text-gray-400 block mt-0.5">mmHg • SQM {currentMetric.sensorConfidence}%</span>
               </div>
 
               <div
@@ -282,11 +282,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 <Activity className="w-5 h-5 text-indigo-400 mb-2" />
                 <span className="text-xs text-gray-500 block">Heart rate</span>
                 <span className="text-2xl font-bold text-gray-900">{currentMetric.heartRate}</span>
-                <span className="text-[10px] text-gray-400 block mt-0.5">bpm</span>
+                <span className="text-[10px] text-gray-400 block mt-0.5">bpm • Sinus</span>
               </div>
             </div>
 
-            {/* SLEEP CARD — wide */}
             <div
               onClick={() => onSelectZone("NEURO_BEHAVIORAL")}
               className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 border border-gray-200/60 shadow-sm cursor-pointer flex items-center justify-between"
@@ -322,32 +321,36 @@ export const MobileView: React.FC<MobileViewProps> = ({
           </div>
         )}
 
-        {/* TAB 3: TELEMETRY CHARTS */}
         {activeTab === "CHARTS" && (
           <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/60 shadow-sm p-3 mx-2">
             <IndicatorDetail
               currentSol={currentSol}
               missionData={missionData}
               selectedZone={selectedZone}
+              activeCrewId={activeCrew}
             />
           </div>
         )}
 
-        {/* TAB 4: ESCALATION TIERS */}
         {activeTab === "TIERS" && (
           <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/60 shadow-sm p-3 mx-2">
             <EscalationLadder
               currentTier={currentTier}
               delayMode={delayMode}
-              onTriggerAction={() => {}}
+              onTriggerAction={() => onOpenProcedure()}
               onOpenGroundPacket={onOpenGroundPacket}
             />
           </div>
         )}
+
+        {/* PERSISTENT DISCLAIMER */}
+        <div className="p-3 my-4 mx-2 rounded-xl bg-slate-100/80 border border-slate-200 text-[10px] text-slate-500 leading-normal text-center">
+          <strong>Decision-Support Disclaimer:</strong> For mission operations guidance only; not for autonomous clinical diagnosis. Defer to Flight Surgeon. Synthetic data.
+        </div>
       </div>
 
       {/* FLOATING ACTION DOCK */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-xl border-t border-gray-200/60 p-3 flex items-center justify-center gap-2 max-w-md mx-auto shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-gray-200/60 p-3 flex items-center justify-center gap-2 max-w-md mx-auto shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         <button
           onClick={onOpenProcedure}
           className="flex-1 py-2.5 bg-gray-900 text-white rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-gray-800 active:scale-[0.98] transition shadow-sm"
@@ -361,7 +364,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
           className="flex-1 py-2.5 bg-indigo-600 text-white rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-indigo-500 active:scale-[0.98] transition shadow-sm"
         >
           <Eye className="w-3.5 h-3.5" />
-          <span>SANS exam</span>
+          <span>SANS Exam</span>
         </button>
 
         <button

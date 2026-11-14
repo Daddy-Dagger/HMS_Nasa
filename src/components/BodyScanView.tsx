@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { AnatomicalZone, HealthStatus, DailyHealthMetric } from "../types/mission";
+import { AnatomicalZone, HealthStatus, DailyHealthMetric, CrewMemberId } from "../types/mission";
+import { evaluateSensorConfidence, CREW_BASELINES } from "../utils/driftEngine";
 
 interface BodyScanViewProps {
   currentMetric: DailyHealthMetric;
@@ -9,6 +10,7 @@ interface BodyScanViewProps {
   selectedZone: AnatomicalZone;
   onScanComplete?: () => void;
   activeCrewName?: string;
+  activeCrewId?: CrewMemberId;
 }
 
 export const BodyScanView: React.FC<BodyScanViewProps> = ({
@@ -19,6 +21,7 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
   selectedZone,
   onScanComplete,
   activeCrewName = "CDR Miller",
+  activeCrewId = "CDR_MILLER",
 }) => {
   const [scanProgress, setScanProgress] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
@@ -26,9 +29,12 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
   const [visibleCards, setVisibleCards] = useState<number[]>([]);
   const scanTimerRef = useRef<number | null>(null);
 
+  const baseline = CREW_BASELINES[activeCrewId] || CREW_BASELINES.CDR_MILLER;
+  const confidence = evaluateSensorConfidence(currentMetric, baseline);
+
   const isCriticalBP = currentMetric.systolicBP >= 140;
 
-  // The vital cards that float around the body
+  // The vital cards that float around the body, now with explicit confidence scores and reasons
   const vitalCards = [
     {
       id: 0,
@@ -37,6 +43,8 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
       unit: "mmHg",
       zone: "CARDIOVASCULAR" as AnatomicalZone,
       status: zoneStatuses.CARDIOVASCULAR,
+      confidence: confidence.score,
+      confidenceReason: confidence.score < 60 ? "Motion artifact, re-measure" : "Arterial wave coherent",
       position: "left-top",
       revealAt: 25,
     },
@@ -47,16 +55,20 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
       unit: "bpm",
       zone: "CARDIOVASCULAR" as AnatomicalZone,
       status: zoneStatuses.CARDIOVASCULAR,
+      confidence: confidence.score < 60 ? 35 : 98,
+      confidenceReason: confidence.score < 60 ? "Noisy ECG leads" : "Sinus rhythm verified",
       position: "right-top",
       revealAt: 35,
     },
     {
       id: 2,
-      label: "Sleep quality",
+      label: "Sleep duration",
       value: `${currentMetric.sleepHours}`,
       unit: "hours",
       zone: "NEURO_BEHAVIORAL" as AnatomicalZone,
       status: zoneStatuses.NEURO_BEHAVIORAL,
+      confidence: 94,
+      confidenceReason: "Actigraphy & polysomnography synced",
       position: "left-mid",
       revealAt: 55,
     },
@@ -67,16 +79,20 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
       unit: "μm TRT",
       zone: "CRANIAL_SANS" as AnatomicalZone,
       status: zoneStatuses.CRANIAL_SANS,
+      confidence: 92,
+      confidenceReason: "OCT BMO-250 registered",
       position: "right-head",
       revealAt: 12,
     },
     {
       id: 4,
-      label: "Bone density",
+      label: "Bone strain",
       value: "0.98",
       unit: "g/cm²",
       zone: "MUSCULOSKELETAL" as AnatomicalZone,
       status: zoneStatuses.MUSCULOSKELETAL,
+      confidence: 96,
+      confidenceReason: "ARED load cell telemetry verified",
       position: "left-bottom",
       revealAt: 75,
     },
@@ -113,7 +129,6 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
     };
   }, [isScanning, scanProgress, onScanComplete, visibleCards, vitalCards]);
 
-  // Auto-start scan on initial mount
   useEffect(() => {
     const t = window.setTimeout(() => startScan(), 400);
     return () => clearTimeout(t);
@@ -133,15 +148,15 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
   const getCardPosition = (position: string) => {
     switch (position) {
       case "left-top":
-        return "left-1 sm:left-3 top-[26%]";
+        return "left-1 sm:left-2 top-[24%]";
       case "right-top":
-        return "right-1 sm:right-3 top-[28%]";
+        return "right-1 sm:right-2 top-[26%]";
       case "left-mid":
-        return "left-1 sm:left-3 top-[52%]";
+        return "left-1 sm:left-2 top-[50%]";
       case "right-head":
-        return "right-1 sm:right-3 top-[10%]";
+        return "right-1 sm:right-2 top-[10%]";
       case "left-bottom":
-        return "left-1 sm:left-3 top-[74%]";
+        return "left-1 sm:left-2 top-[72%]";
       default:
         return "left-2 top-[40%]";
     }
@@ -156,15 +171,19 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
         boxShadow: "0 10px 40px rgba(180, 160, 240, 0.12)",
       }}
     >
-      {/* CLEAN HEADER */}
-      <div className="w-full pt-1 pb-3 px-3 flex items-center justify-between">
+      {/* HEADER */}
+      <div className="w-full pt-1 pb-2 px-3 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900 tracking-tight leading-snug">
-            Let's see how<br />
-            <span className="text-slate-400 font-normal">{activeCrewName} is doing.</span>
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold text-slate-900 tracking-tight leading-snug">
+              {activeCrewName}
+            </h1>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+              Synthetic
+            </span>
+          </div>
           <p className="text-[11px] text-indigo-500 font-medium mt-0.5">
-            Mission Sol {currentSol} • Autonomous Bio-Scan
+            Mission Sol {currentSol} • Decision-Support Bio-Scan
           </p>
         </div>
 
@@ -257,18 +276,14 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
               </clipPath>
             </defs>
 
-            {/* Glowing outer aura of the human figure */}
             <g filter="url(#soft-blur)" opacity="0.6">
               <rect x="0" y="0" width="120" height="300" fill="url(#body-gradient-subtle)" clipPath="url(#human-silhouette-clip)" />
             </g>
 
-            {/* Core translucent body */}
             <rect x="0" y="0" width="120" height="300" fill="url(#body-gradient-subtle)" clipPath="url(#human-silhouette-clip)" opacity="0.92" />
 
-            {/* SCANNING LASER BEAM (SWEEPS HEAD TO TOE) */}
             {isScanning && (
               <g>
-                {/* Intense white scan line */}
                 <line
                   x1="0"
                   y1={scanProgress * 2.85 + 8}
@@ -278,7 +293,6 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
                   strokeWidth="2.5"
                   clipPath="url(#human-silhouette-clip)"
                 />
-                {/* Purple-pink laser halo */}
                 <line
                   x1="0"
                   y1={scanProgress * 2.85 + 8}
@@ -292,7 +306,6 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
               </g>
             )}
 
-            {/* Glowing anatomical checkpoints */}
             <circle cx="60" cy="32" r="3" fill="white" opacity={visibleCards.includes(3) ? "0.95" : "0.25"} className="transition-opacity duration-500" />
             <circle cx="55" cy="76" r="3" fill="white" opacity={visibleCards.includes(0) ? "0.95" : "0.25"} className="transition-opacity duration-500" />
             <circle cx="65" cy="70" r="2.5" fill="white" opacity={visibleCards.includes(1) ? "0.95" : "0.25"} className="transition-opacity duration-500" />
@@ -301,7 +314,7 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
           </svg>
         </div>
 
-        {/* FLOATING GLASS VITAL CARDS */}
+        {/* FLOATING GLASS VITAL CARDS WITH CONFIDENCE SCORE & REASON */}
         {vitalCards.map((card) => {
           const isRevealed = visibleCards.includes(card.id);
           const isSelected = selectedZone === card.zone;
@@ -310,17 +323,32 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
             <div
               key={card.id}
               onClick={() => onSelectZone(card.zone)}
-              className={`absolute ${getCardPosition(card.position)} z-20 max-w-[130px] sm:max-w-[140px] bg-white/90 backdrop-blur-xl rounded-2xl px-3 py-2 shadow-sm border border-white/80 cursor-pointer transition-all duration-500 hover:shadow-md ${
+              className={`absolute ${getCardPosition(card.position)} z-20 max-w-[145px] sm:max-w-[155px] bg-white/95 backdrop-blur-xl rounded-2xl px-3 py-2 shadow-sm border border-slate-200/80 cursor-pointer transition-all duration-500 hover:shadow-md ${
                 isRevealed ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-3 scale-90 pointer-events-none"
-              } ${isSelected ? "ring-2 ring-indigo-400 shadow-indigo-100" : ""}`}
+              } ${isSelected ? "ring-2 ring-indigo-500 shadow-indigo-100" : ""}`}
             >
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${getStatusDotColor(card.status)}`} />
-                <span className="text-[10px] text-slate-500 font-medium truncate">{card.label}</span>
-              </div>
-              <div className="flex items-baseline gap-1">
+              <div className="flex items-center justify-between gap-1 mb-0.5">
+                <div className="flex items-center gap-1 min-w-0">
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${getStatusDotColor(card.status)}`} />
+                  <span className="text-[10px] text-slate-500 font-medium truncate">{card.label}</span>
+                </div>
+                {/* Confidence Badge */}
                 <span
-                  className={`text-lg sm:text-xl font-bold tracking-tight ${
+                  className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                    card.confidence < 60
+                      ? "bg-rose-100 text-rose-700"
+                      : card.confidence < 85
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-emerald-100 text-emerald-700"
+                  }`}
+                >
+                  {card.confidence}%
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-1 my-0.5">
+                <span
+                  className={`text-base sm:text-lg font-bold tracking-tight ${
                     card.status === "CRITICAL"
                       ? "text-rose-600"
                       : card.status === "ATTENTION"
@@ -330,7 +358,12 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
                 >
                   {card.value}
                 </span>
-                <span className="text-[10px] text-slate-400 font-normal">{card.unit}</span>
+                <span className="text-[9px] text-slate-400 font-normal">{card.unit}</span>
+              </div>
+
+              {/* Confidence Reason */}
+              <div className="text-[9px] text-slate-400 truncate leading-tight pt-0.5 border-t border-slate-100" title={card.confidenceReason}>
+                {card.confidenceReason}
               </div>
             </div>
           );
@@ -359,13 +392,15 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
         <div className="flex gap-1.5">
           <button
             onClick={() => onSelectZone("CARDIOVASCULAR")}
-            className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition shadow-sm text-base"
+            className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition shadow-sm text-base font-semibold"
+            title="Cardiovascular"
           >
             ‹
           </button>
           <button
             onClick={() => onSelectZone("NEURO_BEHAVIORAL")}
-            className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition shadow-sm text-base"
+            className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition shadow-sm text-base font-semibold"
+            title="Neuro-Behavioral"
           >
             ›
           </button>
