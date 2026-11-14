@@ -78,6 +78,23 @@ export const IndicatorDetail: React.FC<IndicatorDetailProps> = ({
           fluidShiftDetail: "In-flight sleep deficit averages 1.6–2.0h/night, producing cognitive latency lapses.",
           clinicalTrigger: "<5.0 hours sleep for 3 consecutive sols or PVT reaction latency >500 ms.",
         };
+      case "IMMUNE_METABOLIC":
+        return {
+          icon: Shield,
+          title: "Radiation & Immune Telemetry",
+          subtitle: "Galactic Cosmic Radiation & T-Cell Biomarkers",
+          primaryName: "Radiation Dose Rate",
+          primaryKey: "radiationDoseRate",
+          unit: "mSv/h",
+          baselineVal: 0.02,
+          baselineLabel: "GCR Background (0.02 mSv/h)",
+          thresholdVal: 0.15,
+          thresholdLabel: "SPE Storm Warning (0.15 mSv/h)",
+          currentVal: `${currentMetric.radiationDoseRate} mSv/h (${(currentMetric.radiationDoseRate * 24 * currentSol).toFixed(1)} mSv total)`,
+          nasaCitation: "NASA HRP Space Radiation Evidence Report (Crucian, Cucinotta, Sams 2022)",
+          fluidShiftDetail: "GCR ion tracks induce DNA double-strand breaks and latent viral reactivation (EBV/VZV).",
+          clinicalTrigger: "Solar particle event flux >0.15 mSv/h or absolute lymphocyte count <1000/μL.",
+        };
       case "MUSCULOSKELETAL":
       default:
         return {
