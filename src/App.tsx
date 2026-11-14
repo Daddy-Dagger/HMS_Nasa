@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Zap,
   Lock,
   CheckCircle2,
   AlertTriangle,
   ShieldAlert,
+  Play,
+  Square,
+  Radio,
 } from "lucide-react";
 import { HazardLevel, TelemetryState } from "./types/telemetry";
 import { PanelA_Probe } from "./components/PanelA_Probe";
@@ -29,6 +32,11 @@ export default function App() {
   const [activeHazardName, setActiveHazardName] = useState<string>("Standard Earth-Mars Cruise");
   const [vaultOpen, setVaultOpen] = useState<boolean>(false);
   const [dockingOffset, setDockingOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // 1-Click Guided Demo State
+  const [guidedDemoActive, setGuidedDemoActive] = useState<boolean>(false);
+  const [guidedStepMessage, setGuidedStepMessage] = useState<string>("");
+  const guidedTimerRef = useRef<number[]>([]);
 
   // State synchronization on hazard changes
   useEffect(() => {
@@ -71,6 +79,72 @@ export default function App() {
     }
   }, [hazard]);
 
+  // Guided Demo Tour Sequencer
+  const stopGuidedDemo = () => {
+    guidedTimerRef.current.forEach((t) => clearTimeout(t));
+    guidedTimerRef.current = [];
+    setGuidedDemoActive(false);
+    setGuidedStepMessage("");
+  };
+
+  const startGuidedDemo = () => {
+    stopGuidedDemo();
+    setGuidedDemoActive(true);
+
+    // ACT 1: Nominal
+    setHazard("NOMINAL");
+    setActiveHazardName("Nominal Mars Cruise (Baseline)");
+    setGuidedStepMessage("ACT I (0-15s): Nominal transit. Biology baseline. Solo flight authority.");
+
+    // ACT 2: Hazard Flare at 12s
+    const t1 = setTimeout(() => {
+      setHazard("MODERATE_STRAIN");
+      setActiveHazardName("Solar Flare (Radiation) + Scrubbing Drift (Closed Env)");
+      setGuidedStepMessage(
+        "ACT II (15-30s): SPE Radiation spike + CO2 drift detected passively. Involuntary jitter rises."
+      );
+    }, 12000);
+
+    // ACT 3: Critical Drift & Bio-FbW Intervention at 28s
+    const t2 = setTimeout(() => {
+      setHazard("CRITICAL_DRIFT");
+      setActiveHazardName("Acute SPE Storm + Multi-Day Sleep Fragmentation");
+      setGuidedStepMessage(
+        "ACT III (30-45s): Bio-FbW absorbs tremors (+82% damping). Autopilot shunts authority without grounding."
+      );
+    }, 28000);
+
+    // ACT 4: Closed-Loop Recovery at 45s
+    const t3 = setTimeout(() => {
+      setGuidedStepMessage(
+        "ACT IV (45-60s): Closed-Loop Habitat Actuation purges CO2 & shifts to recovery amber. System restores to green."
+      );
+      // Auto-trigger recovery
+      setTelemetry((prev) => ({
+        ...prev,
+        scrubberDutyCycle: 100,
+        circadianSpectrum: "2100K (Purge Cycle)",
+      }));
+    }, 45000);
+
+    // End Demo at 60s
+    const t4 = setTimeout(() => {
+      setHazard("NOMINAL");
+      setActiveHazardName("Nominal Mars Cruise (Rehabilitated)");
+      setGuidedStepMessage("TOUR COMPLETE: System returned to nominal. The human-machine loop is closed.");
+      setGuidedDemoActive(false);
+    }, 60000);
+
+    guidedTimerRef.current = [t1, t2, t3, t4];
+  };
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      guidedTimerRef.current.forEach((t) => clearTimeout(t));
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6 flex flex-col gap-5 selection:bg-cyan-500 selection:text-black font-mono">
       {/* AEROSPACE HEADER */}
@@ -91,6 +165,28 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* 1-CLICK GUIDED DEMO BUTTON */}
+          <button
+            onClick={guidedDemoActive ? stopGuidedDemo : startGuidedDemo}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-mono transition border ${
+              guidedDemoActive
+                ? "bg-rose-950/80 border-rose-500 text-rose-300 animate-pulse"
+                : "bg-cyan-950/70 border-cyan-600 hover:border-cyan-400 text-cyan-300"
+            }`}
+          >
+            {guidedDemoActive ? (
+              <>
+                <Square className="w-3.5 h-3.5 fill-current" />
+                <span>Stop Demo Tour</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Run 60s Guided Demo</span>
+              </>
+            )}
+          </button>
+
           <button
             onClick={() => setVaultOpen(true)}
             className="flex items-center gap-2 bg-slate-900 border border-cyan-600/50 hover:border-cyan-400 text-cyan-300 px-3 py-1.5 rounded text-xs transition shadow-sm font-sans"
@@ -115,6 +211,17 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* GUIDED DEMO SUBTITLE BANNER */}
+      {guidedDemoActive && (
+        <div className="bg-cyan-950/40 border border-cyan-500/80 p-3 rounded-md flex items-center gap-3 text-xs text-cyan-200 animate-fade-in shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+          <Radio className="w-4 h-4 text-cyan-400 animate-pulse shrink-0" />
+          <div className="font-mono">
+            <strong className="text-cyan-400 uppercase tracking-wider">Mission Director Narration:</strong>{" "}
+            {guidedStepMessage}
+          </div>
+        </div>
+      )}
 
       {/* NASA RIDGE HAZARDS INTERACTIVE INJECTOR */}
       <section className="bg-slate-900/60 border border-slate-800 rounded-lg p-4 font-sans">
