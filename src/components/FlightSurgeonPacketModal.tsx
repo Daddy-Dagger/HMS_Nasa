@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Radio, Download, Check, Copy } from "lucide-react";
+import { Radio, Download, Check, Copy, X } from "lucide-react";
 import { DailyHealthMetric } from "../types/mission";
 
 interface FlightSurgeonPacketModalProps {
@@ -63,39 +63,46 @@ export const FlightSurgeonPacketModal: React.FC<FlightSurgeonPacketModalProps> =
   };
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50 font-mono select-none">
-      <div className="bg-black border border-cyan-500/80 max-w-2xl w-full p-5 text-xs space-y-4 shadow-[0_0_35px_rgba(6,182,212,0.2)]">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50 font-sans select-none animate-fadeIn">
+      <div className="bg-white rounded-3xl max-w-2xl w-full p-6 text-sm space-y-4 shadow-2xl border border-slate-100">
         {/* HEADER */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-          <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs tracking-wider">
-            <Radio className="w-3.5 h-3.5" />
-            <span>FLIGHT-SURGEON SUMMARY DOSSIER // COMPRESSED DOWNLINK PACKET</span>
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <Radio className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900 text-sm">
+                Flight Surgeon Summary Dossier
+              </h3>
+              <p className="text-xs text-slate-400 font-medium">Asynchronous Ground Downlink Packet</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-500 hover:text-white text-xs px-2 py-0.5 border border-slate-800"
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
           >
-            [CLOSE]
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <p className="text-slate-300 text-[11px] leading-relaxed">
-          <strong>NASA HRP Downlink Protocol:</strong> Compressed diagnostic telemetry packet for MCC-Houston Flight Surgeons. Contains delta-from-baseline tracking, artifact filtering records, and onboard countermeasure logs.
+        <p className="text-slate-500 text-xs leading-relaxed">
+          <strong>NASA HRP Protocol:</strong> Compressed diagnostic telemetry packet for MCC-Houston Flight Surgeons. Tracks deviation from individual baseline, sensor motion artifact suppression logs, and autonomous onboard countermeasure history.
         </p>
 
         {/* CODE BLOCK PREVIEW */}
-        <div className="bg-slate-950 p-3 border border-slate-800 text-[10px] text-cyan-300 overflow-x-auto max-h-64 font-mono leading-relaxed">
+        <div className="bg-slate-900 rounded-2xl p-4 text-xs text-indigo-300 overflow-x-auto max-h-60 font-mono leading-relaxed border border-slate-800 shadow-inner">
           <pre>{jsonString}</pre>
         </div>
 
         {/* ACTIONS */}
-        <div className="flex gap-2">
+        <div className="flex gap-2.5 pt-1">
           <button
             onClick={handleCopy}
-            className="flex-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold py-2 text-xs flex items-center justify-center gap-1.5 transition uppercase"
+            className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 text-xs rounded-full flex items-center justify-center gap-2 transition"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? "COPIED TO CLIPBOARD" : "COPY PACKET PAYLOAD"}</span>
+            {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+            <span>{copied ? "Copied to clipboard" : "Copy Payload"}</span>
           </button>
 
           <button
@@ -107,10 +114,10 @@ export const FlightSurgeonPacketModal: React.FC<FlightSurgeonPacketModalProps> =
               a.download = `FLIGHT_SURGEON_DOSSIER_SOL_${currentSol}.json`;
               a.click();
             }}
-            className="flex-1 bg-cyan-950 hover:bg-cyan-900 border border-cyan-500 text-cyan-200 font-bold py-2 text-xs flex items-center justify-center gap-1.5 transition uppercase"
+            className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 text-xs rounded-full flex items-center justify-center gap-2 transition shadow-md active:scale-95"
           >
-            <Download className="w-3.5 h-3.5 text-cyan-400" />
-            <span>EXPORT .JSON DOSSIER</span>
+            <Download className="w-4 h-4 text-indigo-400" />
+            <span>Download .json Dossier</span>
           </button>
         </div>
       </div>

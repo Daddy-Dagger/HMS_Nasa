@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Eye, CheckCircle2, ArrowRight } from "lucide-react";
+import { Eye, CheckCircle2, ArrowRight, X } from "lucide-react";
 
 interface SANSExamModalProps {
   isOpen: boolean;
@@ -8,10 +8,10 @@ interface SANSExamModalProps {
 }
 
 export interface SANSExamResult {
-  hyperopicShiftDiopters: number; // e.g. +1.25 D
-  choroidalFoldDistortions: number; // Count of marked distortions
+  hyperopicShiftDiopters: number;
+  choroidalFoldDistortions: number;
   sansStage: "STAGE_0_NOMINAL" | "STAGE_1_MILD" | "STAGE_2_MODERATE";
-  acuityScore: string; // e.g. "20/40"
+  acuityScore: string;
   recommendedAction: string;
 }
 
@@ -20,21 +20,14 @@ export const SANSExamModal: React.FC<SANSExamModalProps> = ({
   onClose,
   onExamComplete,
 }) => {
-  // Exam Stages: 1: Introduction, 2: Amsler Grid (Choroidal folds), 3: Tumbling E Acuity (Refraction), 4: Results
   const [stage, setStage] = useState<number>(1);
-
-  // Amsler Grid Distortions (array of grid cell indices 0 to 24)
   const [distortedCells, setDistortedCells] = useState<number[]>([]);
-
-  // Tumbling E Acuity Test State
   const [acuityStep, setAcuityStep] = useState<number>(0);
   const [targetDirection, setTargetDirection] = useState<"UP" | "DOWN" | "LEFT" | "RIGHT">("RIGHT");
   const [acuityErrors, setAcuityErrors] = useState<number>(0);
 
-  // Directions array
   const directions: ("UP" | "DOWN" | "LEFT" | "RIGHT")[] = ["UP", "DOWN", "LEFT", "RIGHT"];
 
-  // Randomize Tumbling E direction
   const nextAcuityTarget = () => {
     const randomDir = directions[Math.floor(Math.random() * directions.length)];
     setTargetDirection(randomDir);
@@ -48,7 +41,6 @@ export const SANSExamModal: React.FC<SANSExamModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Handle Amsler cell toggle
   const toggleCell = (index: number) => {
     if (distortedCells.includes(index)) {
       setDistortedCells(distortedCells.filter((i) => i !== index));
@@ -57,119 +49,115 @@ export const SANSExamModal: React.FC<SANSExamModalProps> = ({
     }
   };
 
-  // Handle Tumbling E input
   const handleAcuityChoice = (chosen: "UP" | "DOWN" | "LEFT" | "RIGHT") => {
-    let errors = acuityErrors;
     if (chosen !== targetDirection) {
-      errors += 1;
-      setAcuityErrors(errors);
+      setAcuityErrors((prev) => prev + 1);
     }
 
-    if (acuityStep >= 4) {
-      // Completed acuity steps (5 trials total)
-      setStage(4);
-    } else {
+    if (acuityStep < 4) {
       setAcuityStep((prev) => prev + 1);
       nextAcuityTarget();
+    } else {
+      setStage(4);
     }
   };
 
-  // Calculate diagnostic result
-  const calculateResult = (): SANSExamResult => {
-    const shift = acuityErrors === 0 ? 0.25 : acuityErrors <= 2 ? 1.0 : 1.75;
-    const hasFolds = distortedCells.length > 0;
+  const calculateResults = (): SANSExamResult => {
+    const hyperopicShift = +(0.5 + acuityErrors * 0.35).toFixed(2);
+    const folds = distortedCells.length;
 
     let sansStage: "STAGE_0_NOMINAL" | "STAGE_1_MILD" | "STAGE_2_MODERATE" = "STAGE_0_NOMINAL";
-    if (shift >= 1.5 || distortedCells.length >= 3) {
+    let acuityScore = "20/20";
+    let recommendedAction = "Nominal refraction. Maintain daily aerobic countermeasures.";
+
+    if (folds >= 3 || hyperopicShift >= 1.5) {
       sansStage = "STAGE_2_MODERATE";
-    } else if (shift >= 0.75 || hasFolds) {
+      acuityScore = "20/40";
+      recommendedAction =
+        "Prescription: +1.50D Space Glasses issued. Daily LBNP chaps session (-35 mmHg for 30m) to alleviate retrobulbar CSF pressure. Queue fundus exam.";
+    } else if (folds >= 1 || hyperopicShift >= 0.75) {
       sansStage = "STAGE_1_MILD";
+      acuityScore = "20/25";
+      recommendedAction =
+        "Subclinical hyperopic drift detected. Issue +0.75D reading glasses. Monitor with weekly Amsler battery.";
     }
 
-    const acuityScore =
-      acuityErrors === 0 ? "20/20" : acuityErrors <= 2 ? "20/40" : "20/60";
-
-    const recommendedAction =
-      sansStage === "STAGE_2_MODERATE"
-        ? "Prescribe adjustable focal Space Glasses (+1.75 D) & initiate LBNP chaps -35 mmHg protocol."
-        : sansStage === "STAGE_1_MILD"
-        ? "Equip +0.75 D near-vision readers for checklist tasks; queue CMO fundoscopy."
-        : "Visual acuity within nominal spaceflight envelope. No intervention required.";
-
     return {
-      hyperopicShiftDiopters: shift,
-      choroidalFoldDistortions: distortedCells.length,
+      hyperopicShiftDiopters: hyperopicShift,
+      choroidalFoldDistortions: folds,
       sansStage,
       acuityScore,
       recommendedAction,
     };
   };
 
-  const finalResult = calculateResult();
+  const finalResult = calculateResults();
 
   const handleFinish = () => {
     onExamComplete(finalResult);
     onClose();
-    // Reset state
-    setStage(1);
-    setDistortedCells([]);
-    setAcuityStep(0);
-    setAcuityErrors(0);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50 font-mono select-none">
-      <div className="bg-black border border-cyan-500/80 max-w-xl w-full p-5 text-xs space-y-4 shadow-[0_0_35px_rgba(6,182,212,0.25)]">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50 font-sans select-none animate-fadeIn">
+      <div className="bg-white rounded-3xl max-w-xl w-full p-6 text-sm space-y-4 shadow-2xl border border-slate-100">
         {/* HEADER */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-          <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs tracking-wider">
-            <Eye className="w-4 h-4 text-cyan-400" />
-            <span>IN-FLIGHT SANS OCULAR EXAM // AUTONOMOUS CLINICAL GAMIFICATION</span>
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <Eye className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900 text-sm">
+                SANS Ocular Examination
+              </h3>
+              <p className="text-xs text-slate-400 font-medium">Autonomous Refraction & Grid Check</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-500 hover:text-white text-xs px-2 py-0.5 border border-slate-800"
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
           >
-            [ABORT / ESC]
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* STAGE 1: INTRO & RATIONALE */}
+        {/* STAGE 1: INTRO */}
         {stage === 1 && (
-          <div className="space-y-3">
-            <div className="p-3 bg-slate-950 border border-slate-800 space-y-2 text-[11px]">
-              <span className="text-cyan-400 font-bold block uppercase tracking-wider">
-                NASA SANS Operational Evidence Protocol
+          <div className="space-y-4">
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 text-xs">
+              <span className="font-semibold text-slate-800 block text-sm">
+                NASA SANS Autonomous Protocol
               </span>
-              <p className="text-slate-300 leading-relaxed">
-                70% of long-duration spaceflight crew develop <strong>Spaceflight-Associated Neuro-ocular Syndrome (SANS)</strong>. In interplanetary transit, astronauts lack MRI machines and must test their own vision autonomously.
+              <p className="text-slate-600 leading-relaxed">
+                70% of long-duration spaceflight crew develop <strong>Spaceflight-Associated Neuro-ocular Syndrome (SANS)</strong>. In interplanetary transit, astronauts must test their own vision autonomously.
               </p>
-              <div className="text-slate-400 text-[10px] space-y-1">
+              <div className="text-slate-500 space-y-1 pt-1">
                 <div>• <strong>Phase A: Amsler Grid Test</strong> (Metamorphopsia & Choroidal Fold Undulations).</div>
-                <div>• <strong>Phase B: Dynamic Tumbling-E Acuity</strong> (Near-Point Hyperopic Refractive Shift in Diopters).</div>
+                <div>• <strong>Phase B: Dynamic Tumbling-E Acuity</strong> (Near-Point Hyperopic Shift in Diopters).</div>
               </div>
             </div>
 
             <button
               onClick={() => setStage(2)}
-              className="w-full py-2.5 bg-cyan-950 hover:bg-cyan-900 border border-cyan-500 text-cyan-200 font-bold text-xs flex items-center justify-center gap-2 transition tracking-wider uppercase"
+              className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-full flex items-center justify-center gap-2 transition shadow-md active:scale-95"
             >
-              <span>BEGIN PHASE A: AMSLER GRID CHECK</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>Begin Phase A: Amsler Grid Check</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* STAGE 2: AMSLER GRID TEST (CHOROIDAL FOLD DETECTION) */}
+        {/* STAGE 2: AMSLER GRID */}
         {stage === 2 && (
-          <div className="space-y-3 text-center">
-            <div className="text-left text-[11px] text-slate-300">
-              <span className="text-cyan-400 font-bold block mb-0.5">PHASE A: AMSLER GRID (METAMORPHOPSIA CHECK)</span>
-              <span>Keep your eyes fixed on the center cyan dot. Click any grid square where lines appear wavy, distorted, or blurred.</span>
+          <div className="space-y-4 text-center">
+            <div className="text-left text-xs text-slate-600">
+              <span className="font-semibold text-slate-900 block mb-0.5 text-sm">Phase A: Amsler Grid</span>
+              <span>Keep your eyes fixed on the center dot. Click any square where lines appear wavy, distorted, or missing.</span>
             </div>
 
-            {/* 5x5 INTERACTIVE AMSLER GRID */}
-            <div className="inline-grid grid-cols-5 gap-0.5 bg-slate-800 p-1 border border-slate-700 mx-auto">
+            {/* 5x5 GRID */}
+            <div className="inline-grid grid-cols-5 gap-1 bg-slate-200 p-2 rounded-2xl border border-slate-300 mx-auto shadow-inner">
               {Array.from({ length: 25 }).map((_, i) => {
                 const isCenter = i === 12;
                 const isSelected = distortedCells.includes(i);
@@ -177,48 +165,47 @@ export const SANSExamModal: React.FC<SANSExamModalProps> = ({
                   <div
                     key={i}
                     onClick={() => !isCenter && toggleCell(i)}
-                    className={`w-11 h-11 border border-slate-700/60 flex items-center justify-center transition-all ${
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
                       isCenter
-                        ? "bg-slate-950 cursor-default"
+                        ? "bg-white cursor-default"
                         : isSelected
-                        ? "bg-rose-950 border-rose-500 text-rose-300 cursor-pointer"
-                        : "bg-slate-950 hover:bg-slate-900 cursor-pointer"
+                        ? "bg-rose-100 border border-rose-300 text-rose-700 font-bold cursor-pointer"
+                        : "bg-white hover:bg-slate-50 border border-slate-100 cursor-pointer shadow-sm"
                     }`}
                   >
-                    {isCenter && <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping" />}
-                    {isSelected && <span className="text-[10px] text-rose-400 font-bold">WAVY</span>}
+                    {isCenter && <div className="w-3 h-3 bg-indigo-600 rounded-full animate-ping" />}
+                    {isSelected && <span className="text-[10px] text-rose-600 font-bold">WAVY</span>}
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex justify-between items-center text-[10px] text-slate-400">
-              <span>Distortions Marked: <strong className="text-rose-400">{distortedCells.length}</strong></span>
+            <div className="flex justify-between items-center text-xs text-slate-500 pt-1">
+              <span>Distortions Marked: <strong className="text-rose-600">{distortedCells.length}</strong></span>
               <button
                 onClick={() => setStage(3)}
-                className="py-1.5 px-3 bg-cyan-950 hover:bg-cyan-900 border border-cyan-500 text-cyan-200 font-bold text-xs flex items-center gap-1.5 transition"
+                className="py-2 px-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-full flex items-center gap-1.5 transition shadow-sm active:scale-95"
               >
-                <span>PROCEED TO PHASE B (ACUITY)</span>
-                <ArrowRight className="w-3 h-3" />
+                <span>Proceed to Phase B (Acuity)</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
         )}
 
-        {/* STAGE 3: TUMBLING E DYNAMIC ACUITY TEST */}
+        {/* STAGE 3: TUMBLING E */}
         {stage === 3 && (
           <div className="space-y-4 text-center">
-            <div className="text-left text-[11px] text-slate-300">
-              <span className="text-cyan-400 font-bold block mb-0.5">
-                PHASE B: DYNAMIC TUMBLING-E (REFRACTIVE SHIFT) [TRIAL {acuityStep + 1} OF 5]
+            <div className="text-left text-xs text-slate-600">
+              <span className="font-semibold text-slate-900 block mb-0.5 text-sm">
+                Phase B: Dynamic Tumbling-E [Trial {acuityStep + 1} of 5]
               </span>
               <span>Identify the opening direction of the letter "E". Click the matching directional button below.</span>
             </div>
 
-            {/* DYNAMIC SCALING TUMBLING E */}
-            <div className="h-32 bg-slate-950 border border-slate-800 flex items-center justify-center">
+            <div className="h-36 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-center">
               <div
-                className={`font-black tracking-tighter text-cyan-300 transition-all ${
+                className={`font-black text-slate-900 transition-all ${
                   acuityStep === 0
                     ? "text-6xl"
                     : acuityStep === 1
@@ -244,84 +231,69 @@ export const SANSExamModal: React.FC<SANSExamModalProps> = ({
               </div>
             </div>
 
-            {/* DIRECTIONAL INPUT BUTTONS */}
+            {/* DIRECTIONAL BUTTONS */}
             <div className="grid grid-cols-4 gap-2">
-              <button
-                onClick={() => handleAcuityChoice("UP")}
-                className="py-2 border border-slate-700 bg-slate-900 hover:border-cyan-400 text-white font-bold transition text-xs"
-              >
-                ▲ UP
-              </button>
-              <button
-                onClick={() => handleAcuityChoice("DOWN")}
-                className="py-2 border border-slate-700 bg-slate-900 hover:border-cyan-400 text-white font-bold transition text-xs"
-              >
-                ▼ DOWN
-              </button>
-              <button
-                onClick={() => handleAcuityChoice("LEFT")}
-                className="py-2 border border-slate-700 bg-slate-900 hover:border-cyan-400 text-white font-bold transition text-xs"
-              >
-                ◀ LEFT
-              </button>
-              <button
-                onClick={() => handleAcuityChoice("RIGHT")}
-                className="py-2 border border-slate-700 bg-slate-900 hover:border-cyan-400 text-white font-bold transition text-xs"
-              >
-                ▶ RIGHT
-              </button>
+              {(["UP", "DOWN", "LEFT", "RIGHT"] as const).map((dir) => (
+                <button
+                  key={dir}
+                  onClick={() => handleAcuityChoice(dir)}
+                  className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-xl transition text-xs shadow-sm active:scale-95"
+                >
+                  {dir === "UP" ? "▲ UP" : dir === "DOWN" ? "▼ DOWN" : dir === "LEFT" ? "◀ LEFT" : "▶ RIGHT"}
+                </button>
+              ))}
             </div>
           </div>
         )}
 
-        {/* STAGE 4: CLINICAL DIAGNOSTIC RESULTS */}
+        {/* STAGE 4: RESULTS */}
         {stage === 4 && (
-          <div className="space-y-3">
-            <div className="p-3 bg-slate-950 border border-slate-800 space-y-2 text-[11px]">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-                <span className="text-white font-bold uppercase">SANS DIAGNOSTIC EVALUATION</span>
+          <div className="space-y-4">
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3 text-xs">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <span className="font-semibold text-slate-900 text-sm">Diagnostic Assessment</span>
                 <span
-                  className={`px-1.5 py-0.5 border text-[10px] font-bold ${
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border ${
                     finalResult.sansStage === "STAGE_0_NOMINAL"
-                      ? "bg-emerald-950 text-emerald-300 border-emerald-600"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                       : finalResult.sansStage === "STAGE_1_MILD"
-                      ? "bg-amber-950 text-amber-300 border-amber-600"
-                      : "bg-rose-950 text-rose-300 border-rose-600"
+                      ? "bg-amber-50 text-amber-700 border-amber-200"
+                      : "bg-rose-50 text-rose-700 border-rose-200"
                   }`}
                 >
                   {finalResult.sansStage.replace(/_/g, " ")}
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-[10px] py-1">
-                <div className="p-1.5 bg-black border border-slate-800">
-                  <span className="text-slate-500 block">HYPEROPIC SHIFT</span>
-                  <span className="text-cyan-400 font-bold">+{finalResult.hyperopicShiftDiopters.toFixed(2)} D</span>
+              <div className="grid grid-cols-3 gap-2.5 py-1">
+                <div className="p-2.5 bg-white rounded-xl border border-slate-200/80">
+                  <span className="text-[10px] text-slate-400 font-medium block">Hyperopic Shift</span>
+                  <span className="text-base font-bold text-indigo-600">+{finalResult.hyperopicShiftDiopters.toFixed(2)} D</span>
                 </div>
-                <div className="p-1.5 bg-black border border-slate-800">
-                  <span className="text-slate-500 block">CHOROIDAL FOLDS</span>
-                  <span className={finalResult.choroidalFoldDistortions > 0 ? "text-rose-400 font-bold" : "text-emerald-400 font-bold"}>
-                    {finalResult.choroidalFoldDistortions > 0 ? `${finalResult.choroidalFoldDistortions} SECTORS` : "NONE DETECTED"}
+                <div className="p-2.5 bg-white rounded-xl border border-slate-200/80">
+                  <span className="text-[10px] text-slate-400 font-medium block">Choroidal Folds</span>
+                  <span className={`text-base font-bold ${finalResult.choroidalFoldDistortions > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                    {finalResult.choroidalFoldDistortions > 0 ? `${finalResult.choroidalFoldDistortions} Sectors` : "None"}
                   </span>
                 </div>
-                <div className="p-1.5 bg-black border border-slate-800">
-                  <span className="text-slate-500 block">NEAR ACUITY</span>
-                  <span className="text-white font-bold">{finalResult.acuityScore}</span>
+                <div className="p-2.5 bg-white rounded-xl border border-slate-200/80">
+                  <span className="text-[10px] text-slate-400 font-medium block">Near Acuity</span>
+                  <span className="text-base font-bold text-slate-900">{finalResult.acuityScore}</span>
                 </div>
               </div>
 
-              <div className="p-2 border border-slate-800 bg-black text-[10px] space-y-1">
-                <div className="text-cyan-400 font-bold">PRESCRIPTION COUNTERMEASURE:</div>
-                <div className="text-slate-300 leading-relaxed">{finalResult.recommendedAction}</div>
+              <div className="p-3 bg-white rounded-xl border border-slate-200/80 space-y-1">
+                <div className="font-semibold text-slate-800 text-xs">Prescription Countermeasure:</div>
+                <div className="text-slate-600 leading-relaxed text-xs">{finalResult.recommendedAction}</div>
               </div>
             </div>
 
             <button
               onClick={handleFinish}
-              className="w-full py-2.5 bg-cyan-950 hover:bg-cyan-900 border border-cyan-500 text-cyan-200 font-bold text-xs flex items-center justify-center gap-2 transition tracking-wider uppercase"
+              className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-full flex items-center justify-center gap-2 transition shadow-md active:scale-95"
             >
-              <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
-              <span>LOG SANS EXAM RESULT TO MISSION TELEMETRY</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Log SANS Result to Mission Telemetry</span>
             </button>
           </div>
         )}

@@ -3,14 +3,12 @@ import {
   Play,
   Square,
   FileText,
-  Wifi,
-  WifiOff,
   Eye,
   Watch,
   Monitor,
   Smartphone,
-  Users,
   Activity,
+  Radio,
 } from "lucide-react";
 import { AnatomicalZone, HealthStatus, EscalationTier } from "./types/mission";
 import { MOCK_30_DAY_MISSION } from "./data/mock30DayMission";
@@ -50,8 +48,8 @@ export default function App() {
   // View mode: Full PC console vs Mobile Handheld vs Minimalist Wearable HUD
   const [viewMode, setViewMode] = useState<"EXPEDITION_CONSOLE" | "MOBILE_PAD" | "WEARABLE_WATCH_HUD">("EXPEDITION_CONSOLE");
 
-  // Console Left Panel Mode: Full Anatomical Map vs 7-Dot Glyph vs Body Scan
-  const [consoleLeftMode, setConsoleLeftMode] = useState<"BODY_MAP" | "GLYPH" | "BODY_SCAN">("BODY_SCAN");
+  // Console Left Panel Mode: Body Scan vs Vector Map vs 7-Dot Glyph
+  const [consoleLeftMode, setConsoleLeftMode] = useState<"BODY_SCAN" | "BODY_MAP" | "GLYPH">("BODY_SCAN");
 
   // Active crew member selector
   const [activeCrew, setActiveCrew] = useState<CrewMemberId>("CDR_MILLER");
@@ -75,7 +73,7 @@ export default function App() {
     { id: "SCI_VANCE", name: "SCI VANCE", role: "Science Specialist", status: "ATTENTION", primaryAlert: "Sleep 5.8h // Mild Debt" },
   ];
 
-  // Current metric for active Sol (Miller's profile)
+  // Current metric for active Sol
   const currentMetric = MOCK_30_DAY_MISSION[currentSol - 1] || MOCK_30_DAY_MISSION[0];
 
   // Dynamic zone statuses computed from currentSol telemetry
@@ -145,88 +143,93 @@ export default function App() {
   }, [isPlaying]);
 
   return (
-    <div className="min-h-screen text-slate-100 p-2 sm:p-4 flex flex-col justify-between font-mono select-none antialiased">
+    <div className="min-h-screen text-slate-800 p-3 sm:p-5 flex flex-col justify-between font-sans select-none antialiased">
       {/* APEX HEADER WITH MULTI-DISPLAY SELECTOR & DELAY-MODE TOGGLES */}
-      <header className="glass-panel px-4 py-2.5 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs mb-3 shadow-[0_0_30px_rgba(6,182,212,0.08)]">
-        <div className="flex items-center gap-3">
-          <span className="h-2.5 w-2.5 bg-cyan-400 rounded-full shadow-[0_0_10px_#22d3ee] animate-pulse" />
-          <span className="font-bold tracking-widest text-white uppercase text-sm">
-            AEGIS // BIO-FBW
-          </span>
-          <span className="hidden sm:inline text-slate-600">|</span>
+      <header className="glass-card rounded-2xl px-5 py-3 flex flex-wrap items-center justify-between gap-3 mb-4 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+        <div className="flex items-center gap-3.5">
+          {/* AURORA APP ICON */}
+          <div
+            className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm"
+            style={{ background: "linear-gradient(135deg, #c4b5fd, #fda4af, #93c5fd)" }}
+          >
+            <span className="text-white font-extrabold text-base tracking-tight">A</span>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-900 text-base tracking-tight">AEGIS</span>
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                Bio-Telemetry
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 font-medium">NASA Artemis & Deep-Space Health</p>
+          </div>
+
+          <span className="hidden sm:inline text-slate-200 font-light mx-1">|</span>
 
           {/* VIEW MODE TOGGLE (PC CONSOLE vs MOBILE vs WEARABLE) */}
-          <div className="flex items-center gap-1 bg-black/80 p-0.5 border border-cyan-500/30 rounded-lg">
+          <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-full border border-slate-200/80">
             <button
               onClick={() => setViewMode("EXPEDITION_CONSOLE")}
-              className={`px-2.5 py-1 text-[10px] rounded flex items-center gap-1 transition ${
+              className={`px-3.5 py-1.5 text-xs rounded-full flex items-center gap-1.5 transition font-medium ${
                 viewMode === "EXPEDITION_CONSOLE"
-                  ? "bg-cyan-950 text-cyan-200 font-bold border border-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.3)]"
-                  : "text-slate-500 hover:text-slate-300"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              <Monitor className="w-3 h-3" />
-              <span className="hidden md:inline">PC CONSOLE</span>
+              <Monitor className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Console</span>
               <span className="md:hidden">PC</span>
             </button>
             <button
               onClick={() => setViewMode("MOBILE_PAD")}
-              className={`px-2.5 py-1 text-[10px] rounded flex items-center gap-1 transition ${
+              className={`px-3.5 py-1.5 text-xs rounded-full flex items-center gap-1.5 transition font-medium ${
                 viewMode === "MOBILE_PAD"
-                  ? "bg-cyan-950 text-cyan-200 font-bold border border-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.3)]"
-                  : "text-slate-500 hover:text-slate-300"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              <Smartphone className="w-3 h-3" />
-              <span>MOBILE</span>
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Mobile</span>
             </button>
             <button
               onClick={() => setViewMode("WEARABLE_WATCH_HUD")}
-              className={`px-2.5 py-1 text-[10px] rounded flex items-center gap-1 transition ${
+              className={`px-3.5 py-1.5 text-xs rounded-full flex items-center gap-1.5 transition font-medium ${
                 viewMode === "WEARABLE_WATCH_HUD"
-                  ? "bg-cyan-950 text-cyan-200 font-bold border border-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.3)]"
-                  : "text-slate-500 hover:text-slate-300"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              <Watch className="w-3 h-3" />
-              <span className="hidden md:inline">WEARABLE HUD</span>
-              <span className="md:hidden">WATCH</span>
+              <Watch className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Wearable HUD</span>
+              <span className="md:hidden">Watch</span>
             </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 text-[11px]">
+        <div className="flex items-center gap-2 sm:gap-2.5">
           {/* DELAY-MODE TOGGLE */}
           <button
             onClick={() =>
               setDelayMode(delayMode === "MARS_20M_DELAY" ? "LEO_REALTIME" : "MARS_20M_DELAY")
             }
-            className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold flex items-center gap-1.5 transition ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition border ${
               delayMode === "MARS_20M_DELAY"
-                ? "bg-amber-950/80 border-amber-500 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-                : "bg-cyan-950/80 border-cyan-500 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+                ? "bg-amber-50 text-amber-700 border-amber-200"
+                : "bg-emerald-50 text-emerald-700 border-emerald-200"
             }`}
           >
-            {delayMode === "MARS_20M_DELAY" ? (
-              <>
-                <WifiOff className="w-3 h-3 text-amber-400" />
-                <span>MARS 20m LAG</span>
-              </>
-            ) : (
-              <>
-                <Wifi className="w-3 h-3 text-cyan-400" />
-                <span>LEO REAL-TIME</span>
-              </>
-            )}
+            <Radio className="w-3.5 h-3.5" />
+            <span>{delayMode === "MARS_20M_DELAY" ? "Mars 20m Lag" : "LEO Real-time"}</span>
           </button>
 
           {/* SANS OCULAR EXAM BUTTON */}
           <button
             onClick={() => setSansExamOpen(true)}
-            className="flex items-center gap-1.5 bg-cyan-950/80 border border-cyan-500 hover:border-cyan-400 text-cyan-200 px-2.5 py-1 rounded-lg text-[10px] transition font-bold shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+            className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3.5 py-1.5 rounded-full text-xs font-semibold transition shadow-sm active:scale-95"
           >
-            <Eye className="w-3 h-3 text-cyan-400" />
-            <span className="hidden sm:inline">SANS EXAM</span>
+            <Eye className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">SANS Exam</span>
           </button>
 
           {/* PROCEDURE GUIDE BUTTON */}
@@ -235,19 +238,19 @@ export default function App() {
               setActiveProcedure(currentTier === 2 ? "OCULAR_ULTRASOUND" : "LBNP_CHAPS");
               setProcedureModalOpen(true);
             }}
-            className="flex items-center gap-1.5 bg-emerald-950/80 border border-emerald-500 hover:border-emerald-400 text-emerald-200 px-2.5 py-1 rounded-lg text-[10px] transition font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+            className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3.5 py-1.5 rounded-full text-xs font-semibold transition shadow-sm active:scale-95"
           >
-            <Activity className="w-3 h-3 text-emerald-400" />
-            <span className="hidden sm:inline">PROCEDURES</span>
+            <Activity className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Procedures</span>
           </button>
 
           {/* FLIGHT SURGEON DOSSIER BUTTON */}
           <button
             onClick={() => setPacketOpen(true)}
-            className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 hover:border-cyan-400 text-cyan-300 px-2.5 py-1 rounded-lg text-[10px] transition"
+            className="flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-1.5 rounded-full text-xs font-semibold transition shadow-sm active:scale-95"
           >
-            <FileText className="w-3 h-3 text-cyan-400" />
-            <span className="hidden sm:inline">GROUND DOSSIER</span>
+            <FileText className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Ground Dossier</span>
           </button>
         </div>
       </header>
@@ -280,7 +283,7 @@ export default function App() {
         />
       ) : viewMode === "WEARABLE_WATCH_HUD" ? (
         /* ========================================================================= */
-        /* VIEWPORT 2: WEARABLE HUD (RECTANGULAR CUFF & CIRCULAR BEZEL MODES) */
+        /* VIEWPORT 2: WEARABLE HUD */
         /* ========================================================================= */
         <div className="flex-1 flex flex-col items-center justify-center p-2 mb-3">
           <WearableWatchHUD
@@ -301,96 +304,87 @@ export default function App() {
         </div>
       ) : (
         /* ========================================================================= */
-        /* VIEWPORT 3: PC EXPEDITION CONSOLE (FULL 3-COLUMN GLASS COCKPIT) */
+        /* VIEWPORT 3: PC EXPEDITION CONSOLE */
         /* ========================================================================= */
         <div className="flex flex-col flex-1">
           {/* MULTI-ASTRONAUT CREW MESH BAR */}
-          <section className="glass-panel px-3.5 py-2 mb-3 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
+          <section className="glass-card px-4 py-2.5 mb-3 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs shadow-sm">
             <div className="flex items-center gap-2">
-              <Users className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">CREW MESH:</span>
+              <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Crew Mesh:</span>
             </div>
 
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {crewRoster.map((crew) => (
                 <button
                   key={crew.id}
                   onClick={() => setActiveCrew(crew.id)}
-                  className={`px-2.5 py-1 rounded-lg border text-[10px] flex items-center gap-1.5 transition ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs flex items-center gap-2 transition font-medium border ${
                     activeCrew === crew.id
-                      ? "bg-cyan-950 border-cyan-400 text-cyan-100 font-bold shadow-[0_0_10px_rgba(6,182,212,0.3)]"
-                      : "bg-black/60 border-slate-800 text-slate-400 hover:border-slate-700"
+                      ? "bg-slate-900 border-slate-900 text-white shadow-sm"
+                      : "bg-white/80 border-slate-200/80 text-slate-600 hover:border-slate-300"
                   }`}
                 >
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${
+                    className={`w-2 h-2 rounded-full ${
                       crew.status === "CRITICAL"
                         ? "bg-rose-500 animate-pulse"
                         : crew.status === "ATTENTION"
                         ? "bg-amber-400"
-                        : "bg-emerald-400"
+                        : "bg-emerald-500"
                     }`}
                   />
                   <span>{crew.name}</span>
-                  <span className="text-[9px] text-slate-500">({crew.primaryAlert})</span>
+                  <span className="text-[11px] text-slate-400 font-normal">({crew.primaryAlert})</span>
                 </button>
               ))}
             </div>
           </section>
 
-          {/* 30-DAY MISSION TIMELINE SCRUBBER (RUBRIC SCENARIO PRESETS) */}
-          <section className="glass-panel p-3 mb-3 rounded-xl">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          {/* 30-DAY MISSION TIMELINE SCRUBBER */}
+          <section className="glass-card p-4 mb-4 rounded-2xl shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-2.5">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsPlaying(!isPlaying)}
-                  className="p-1 rounded border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 bg-black/80 flex items-center gap-1 text-[10px] px-2.5 shadow-[0_0_8px_rgba(6,182,212,0.2)]"
+                  className="px-3.5 py-1.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 transition flex items-center gap-1.5 text-xs font-semibold shadow-sm"
                 >
-                  {isPlaying ? <Square className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
-                  <span>{isPlaying ? "HALT" : "PLAY TIMELINE"}</span>
+                  {isPlaying ? <Square className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                  <span>{isPlaying ? "Pause" : "Play Timeline"}</span>
                 </button>
 
-                <span className="text-xs font-bold text-white">
-                  MISSION PROGRESSION: <span className="text-cyan-400">SOL {currentSol}</span> / 30
+                <span className="text-sm font-semibold text-slate-900">
+                  Mission Timeline: <span className="text-indigo-600 font-bold">Sol {currentSol}</span> / 30
                 </span>
               </div>
 
-              {/* SCRIPTED EVENT JUMP BUTTONS */}
-              <div className="flex flex-wrap gap-1.5 text-[9px]">
-                <button
-                  onClick={() => { setIsPlaying(false); setCurrentSol(1); }}
-                  className={`px-2 py-0.5 rounded border transition ${currentSol === 1 ? "bg-cyan-950 text-cyan-300 border-cyan-500 font-bold shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-black/60 text-slate-400 border-slate-800"}`}
-                >
-                  SOL 1: BASELINE
-                </button>
-                <button
-                  onClick={() => { setIsPlaying(false); setCurrentSol(8); }}
-                  className={`px-2 py-0.5 rounded border transition ${currentSol === 8 ? "bg-amber-950 text-amber-300 border-amber-500 font-bold shadow-[0_0_8px_rgba(245,158,11,0.3)]" : "bg-black/60 text-slate-400 border-slate-800"}`}
-                >
-                  SOL 8: SENSOR GLITCH
-                </button>
-                <button
-                  onClick={() => { setIsPlaying(false); setCurrentSol(18); }}
-                  className={`px-2 py-0.5 rounded border transition ${currentSol === 18 ? "bg-amber-950 text-amber-300 border-amber-500 font-bold shadow-[0_0_8px_rgba(245,158,11,0.3)]" : "bg-black/60 text-slate-400 border-slate-800"}`}
-                >
-                  SOL 18: SLEEP DECLINE
-                </button>
-                <button
-                  onClick={() => { setIsPlaying(false); setCurrentSol(23); }}
-                  className={`px-2 py-0.5 rounded border transition ${currentSol === 23 ? "bg-rose-950 text-rose-300 border-rose-500 font-bold shadow-[0_0_10px_rgba(244,63,94,0.3)] animate-pulse" : "bg-black/60 text-slate-400 border-slate-800"}`}
-                >
-                  SOL 23: BP SPIKE & TIER 1
-                </button>
-                <button
-                  onClick={() => { setIsPlaying(false); setCurrentSol(28); }}
-                  className={`px-2 py-0.5 rounded border transition ${currentSol === 28 ? "bg-emerald-950 text-emerald-300 border-emerald-500 font-bold shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "bg-black/60 text-slate-400 border-slate-800"}`}
-                >
-                  SOL 28: GROUND DOSSIER
-                </button>
+              {/* SCRIPTED EVENT JUMP PILLS */}
+              <div className="flex flex-wrap gap-1.5 text-xs">
+                {[
+                  { sol: 1, label: "Sol 1: Baseline" },
+                  { sol: 8, label: "Sol 8: Glitch" },
+                  { sol: 18, label: "Sol 18: Sleep Loss" },
+                  { sol: 23, label: "Sol 23: BP Spike" },
+                  { sol: 28, label: "Sol 28: Dossier" },
+                ].map((preset) => (
+                  <button
+                    key={preset.sol}
+                    onClick={() => {
+                      setIsPlaying(false);
+                      setCurrentSol(preset.sol);
+                    }}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition border ${
+                      currentSol === preset.sol
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm font-semibold"
+                        : "bg-white/80 border-slate-200/80 text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* INTERACTIVE TIMELINE SLIDER */}
+            {/* TIMELINE SLIDER */}
             <input
               type="range"
               min="1"
@@ -400,61 +394,61 @@ export default function App() {
                 setIsPlaying(false);
                 setCurrentSol(Number(e.target.value));
               }}
-              className="w-full accent-cyan-400 bg-slate-900 cursor-pointer h-1.5 rounded-lg"
+              className="w-full accent-indigo-600 bg-slate-200 cursor-pointer h-2 rounded-full"
             />
           </section>
 
-          {/* MAIN 3-COLUMN CLINICAL HUD */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 mb-3">
-            {/* COLUMN 1: INTERACTIVE BODY MAP & GLYPH TOGGLE (3 COLS) */}
-            <div className="lg:col-span-3 flex flex-col">
-              <div className="flex items-center justify-between mb-1.5 px-1 text-[10px]">
-                <span className="text-slate-400 font-bold uppercase">ANATOMY DISPLAY:</span>
-                <div className="flex items-center gap-1 bg-black/60 p-0.5 border border-slate-800 rounded">
+          {/* MAIN 3-COLUMN CLINICAL WORKSTATION */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 mb-3">
+            {/* COLUMN 1: ANATOMICAL DISPLAY (3 COLS) */}
+            <div className="lg:col-span-4 flex flex-col">
+              <div className="flex items-center justify-between mb-2 px-1">
+                <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                  Anatomy View:
+                </span>
+                <div className="flex items-center gap-1 bg-slate-100 p-0.5 border border-slate-200 rounded-full">
                   <button
                     onClick={() => setConsoleLeftMode("BODY_SCAN")}
-                    className={`px-1.5 py-0.5 rounded text-[9px] transition ${
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition ${
                       consoleLeftMode === "BODY_SCAN"
-                        ? "bg-cyan-950 text-cyan-300 font-bold"
-                        : "text-slate-500"
+                        ? "bg-slate-900 text-white shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
                     }`}
                   >
-                    SCAN
+                    Scan
                   </button>
                   <button
                     onClick={() => setConsoleLeftMode("BODY_MAP")}
-                    className={`px-1.5 py-0.5 rounded text-[9px] transition ${
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition ${
                       consoleLeftMode === "BODY_MAP"
-                        ? "bg-cyan-950 text-cyan-300 font-bold"
-                        : "text-slate-500"
+                        ? "bg-slate-900 text-white shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
                     }`}
                   >
-                    VECTOR
+                    Vector
                   </button>
                   <button
                     onClick={() => setConsoleLeftMode("GLYPH")}
-                    className={`px-1.5 py-0.5 rounded text-[9px] transition ${
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition ${
                       consoleLeftMode === "GLYPH"
-                        ? "bg-cyan-950 text-cyan-300 font-bold"
-                        : "text-slate-500"
+                        ? "bg-slate-900 text-white shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
                     }`}
                   >
-                    7-DOT
+                    7-Dot
                   </button>
                 </div>
               </div>
 
               {consoleLeftMode === "BODY_SCAN" ? (
-                <div className="rounded-xl overflow-hidden" style={{ background: "linear-gradient(180deg, #fafafa, #f0eef8, #f0f4fa)" }}>
-                  <BodyScanView
-                    currentMetric={currentMetric}
-                    currentSol={currentSol}
-                    zoneStatuses={zoneStatuses}
-                    onSelectZone={setSelectedZone}
-                    selectedZone={selectedZone}
-                    activeCrewName={crewRoster.find((c) => c.id === activeCrew)?.name}
-                  />
-                </div>
+                <BodyScanView
+                  currentMetric={currentMetric}
+                  currentSol={currentSol}
+                  zoneStatuses={zoneStatuses}
+                  onSelectZone={setSelectedZone}
+                  selectedZone={selectedZone}
+                  activeCrewName={crewRoster.find((c) => c.id === activeCrew)?.name}
+                />
               ) : consoleLeftMode === "BODY_MAP" ? (
                 <BodyMap
                   selectedZone={selectedZone}
@@ -462,9 +456,9 @@ export default function App() {
                   zoneStatuses={zoneStatuses}
                 />
               ) : (
-                <div className="glass-panel rounded-xl p-4 flex flex-col items-center justify-center flex-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-3">
-                    7-DOT CONSTELLATION GLYPH
+                <div className="glass-card rounded-3xl p-5 flex flex-col items-center justify-center flex-1 shadow-sm">
+                  <span className="text-xs text-slate-400 uppercase tracking-widest font-semibold mb-3">
+                    7-Dot Constellation Glyph
                   </span>
                   <ConstellationGlyph
                     selectedZone={selectedZone}
@@ -475,8 +469,8 @@ export default function App() {
               )}
             </div>
 
-            {/* COLUMN 2: INDICATOR DETAIL & 30-DAY TREND CHARTS (5 COLS) */}
-            <div className="lg:col-span-5">
+            {/* COLUMN 2: INDICATOR DETAIL (4 COLS) */}
+            <div className="lg:col-span-4">
               <IndicatorDetail
                 currentSol={currentSol}
                 missionData={MOCK_30_DAY_MISSION}
@@ -484,7 +478,7 @@ export default function App() {
               />
             </div>
 
-            {/* COLUMN 3: THE ESCALATION LADDER (4 COLS) */}
+            {/* COLUMN 3: ESCALATION LADDER (4 COLS) */}
             <div className="lg:col-span-4">
               <EscalationLadder
                 currentTier={currentTier}
@@ -500,19 +494,19 @@ export default function App() {
         </div>
       )}
 
-      {/* FOOTER AUDIT BANNER */}
-      <footer className="glass-panel px-4 py-2 rounded-xl flex flex-wrap items-center justify-between text-[10px] text-slate-400 shadow-[0_0_20px_rgba(6,182,212,0.05)]">
+      {/* FOOTER */}
+      <footer className="glass-card rounded-2xl px-5 py-3 flex flex-wrap items-center justify-between text-xs text-slate-400 shadow-sm mt-auto">
         <div className="flex items-center gap-3">
-          <span>ACTIVE CREW: <strong className="text-white">{activeCrew.replace("_", " ")}</strong></span>
-          <span className="text-slate-600">|</span>
-          <span>DISPLAY MODE: <strong className="text-cyan-400">{viewMode}</strong></span>
+          <span>Active Operator: <strong className="text-slate-800 font-semibold">{activeCrew.replace("_", " ")}</strong></span>
+          <span className="text-slate-200">|</span>
+          <span>Display Profile: <strong className="text-indigo-600 font-semibold">{viewMode}</strong></span>
         </div>
         <div>
-          <span>NASA HUMAN RESEARCH PROGRAM (HRP) COMPLIANT // ARTEMIS READY</span>
+          <span>NASA Human Research Program (HRP) Compliant • Artemis Deep-Space System</span>
         </div>
       </footer>
 
-      {/* FLIGHT SURGEON DOSSIER MODAL */}
+      {/* MODALS */}
       <FlightSurgeonPacketModal
         isOpen={packetOpen}
         onClose={() => setPacketOpen(false)}
@@ -520,7 +514,6 @@ export default function App() {
         missionData={MOCK_30_DAY_MISSION}
       />
 
-      {/* SANS OCULAR EXAM MODAL */}
       <SANSExamModal
         isOpen={sansExamOpen}
         onClose={() => setSansExamOpen(false)}
@@ -530,7 +523,6 @@ export default function App() {
         }}
       />
 
-      {/* ANIMATED MEDICAL PROCEDURE GUIDE MODAL */}
       <MedicalProcedureModal
         isOpen={procedureModalOpen}
         onClose={() => setProcedureModalOpen(false)}

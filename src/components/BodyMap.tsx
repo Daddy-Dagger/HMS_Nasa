@@ -21,53 +21,52 @@ export const BodyMap: React.FC<BodyMapProps> = ({
         return "#f59e0b"; // amber-500
       case "NOMINAL":
       default:
-        return "#06b6d4"; // cyan-500
+        return "#6366f1"; // indigo-500
     }
   };
 
   const getStatusBadge = (status: HealthStatus) => {
     switch (status) {
       case "CRITICAL":
-        return "bg-rose-950/80 text-rose-300 border-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.3)] animate-pulse";
+        return "bg-rose-50 text-rose-700 border-rose-200";
       case "ATTENTION":
-        return "bg-amber-950/80 text-amber-300 border-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.2)]";
+        return "bg-amber-50 text-amber-700 border-amber-200";
       case "NOMINAL":
       default:
-        return "bg-cyan-950/80 text-cyan-300 border-cyan-600";
+        return "bg-emerald-50 text-emerald-700 border-emerald-200";
     }
   };
 
   return (
-    <div className="h-full bg-slate-950/80 backdrop-blur-md border border-cyan-500/20 rounded-xl p-4 font-mono select-none flex flex-col justify-between shadow-[0_0_25px_rgba(6,182,212,0.06)] relative overflow-hidden">
-      {/* CORNER ACCENT NOTCHES */}
-      <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-cyan-400" />
-      <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-cyan-400" />
-
+    <div className="glass-card rounded-3xl p-5 flex flex-col justify-between h-full shadow-[0_10px_35px_rgba(15,23,42,0.04)]">
       <div>
-        <div className="flex items-center justify-between border-b border-slate-800/80 pb-2 mb-3">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_6px_#06b6d4]" />
-            <span className="text-[11px] font-bold tracking-widest text-white uppercase">
-              ANATOMICAL BODY MAP
-            </span>
+        {/* HEADER */}
+        <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <Activity className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-sm font-semibold text-slate-900 block leading-tight">
+                Anatomical Map
+              </span>
+              <span className="text-[11px] text-slate-400 font-medium">5 Hazard Zones</span>
+            </div>
           </div>
-          <span className="text-[9px] px-2 py-0.5 bg-black/80 border border-cyan-500/30 text-cyan-300 rounded font-bold">
-            5 NASA HAZARD ZONES
+          <span className="text-[11px] px-2.5 py-1 bg-slate-50 border border-slate-200/80 text-slate-600 rounded-full font-medium">
+            NASA HRP
           </span>
         </div>
 
-        {/* SVG INTERACTIVE HUMAN VECTOR */}
-        <div className="relative aspect-[3/4] bg-black/60 border border-slate-800/80 rounded-xl flex items-center justify-center p-2 mb-3 overflow-hidden shadow-inner">
-          {/* Subtle radar grid background */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.05)_0%,transparent_70%)] pointer-events-none" />
-
+        {/* CLEAN SVG HUMAN VECTOR */}
+        <div className="relative aspect-[3/4] bg-slate-50/60 border border-slate-100 rounded-2xl flex items-center justify-center p-2 mb-3 overflow-hidden">
           <svg
             viewBox="0 0 200 320"
-            className="w-full h-full max-h-[270px] drop-shadow-[0_0_15px_rgba(6,182,212,0.15)] z-10"
+            className="w-full h-full max-h-[260px] drop-shadow-sm z-10"
           >
-            {/* GRID LINES BACKGROUND */}
-            <line x1="100" y1="0" x2="100" y2="320" stroke="#1e293b" strokeDasharray="3 3" opacity="0.6" />
-            <line x1="0" y1="160" x2="200" y2="160" stroke="#1e293b" strokeDasharray="3 3" opacity="0.6" />
+            {/* Soft grid lines */}
+            <line x1="100" y1="0" x2="100" y2="320" stroke="#e2e8f0" strokeDasharray="3 3" opacity="0.6" />
+            <line x1="0" y1="160" x2="200" y2="160" stroke="#e2e8f0" strokeDasharray="3 3" opacity="0.6" />
 
             {/* 1. CRANIAL / OCULAR / SANS (HEAD) */}
             <g
@@ -78,12 +77,11 @@ export const BodyMap: React.FC<BodyMapProps> = ({
                 cx="100"
                 cy="38"
                 r="22"
-                fill="#030712"
+                fill="#ffffff"
                 stroke={getStatusColor(zoneStatuses.CRANIAL_SANS)}
-                strokeWidth={selectedZone === "CRANIAL_SANS" ? "3" : "1.5"}
-                className={selectedZone === "CRANIAL_SANS" ? "filter drop-shadow-[0_0_10px_#06b6d4]" : ""}
+                strokeWidth={selectedZone === "CRANIAL_SANS" ? "3" : "2"}
+                className={selectedZone === "CRANIAL_SANS" ? "filter drop-shadow-[0_0_8px_rgba(99,102,241,0.4)]" : ""}
               />
-              {/* Eye & Intracranial Icon */}
               <circle cx="92" cy="36" r="2.5" fill={getStatusColor(zoneStatuses.CRANIAL_SANS)} />
               <circle cx="108" cy="36" r="2.5" fill={getStatusColor(zoneStatuses.CRANIAL_SANS)} />
               <path d="M 94 45 Q 100 48 106 45" stroke={getStatusColor(zoneStatuses.CRANIAL_SANS)} strokeWidth="1.5" fill="none" />
@@ -96,14 +94,13 @@ export const BodyMap: React.FC<BodyMapProps> = ({
             >
               <path
                 d="M 72 65 L 128 65 L 120 125 L 80 125 Z"
-                fill="#030712"
+                fill="#ffffff"
                 stroke={getStatusColor(zoneStatuses.CARDIOVASCULAR)}
-                strokeWidth={selectedZone === "CARDIOVASCULAR" ? "3" : "1.5"}
-                className={selectedZone === "CARDIOVASCULAR" ? "filter drop-shadow-[0_0_10px_#06b6d4]" : ""}
+                strokeWidth={selectedZone === "CARDIOVASCULAR" ? "3" : "2"}
+                className={selectedZone === "CARDIOVASCULAR" ? "filter drop-shadow-[0_0_8px_rgba(99,102,241,0.4)]" : ""}
               />
-              {/* Heart Symbol */}
               <circle cx="94" cy="90" r="5" fill={getStatusColor(zoneStatuses.CARDIOVASCULAR)} opacity="0.8" />
-              <path d="M 88 88 Q 94 80 100 88 T 100 98 L 94 104 L 88 98 Z" fill={getStatusColor(zoneStatuses.CARDIOVASCULAR)} opacity="0.4" />
+              <path d="M 88 88 Q 94 80 100 88 T 100 98 L 94 104 L 88 98 Z" fill={getStatusColor(zoneStatuses.CARDIOVASCULAR)} opacity="0.3" />
             </g>
 
             {/* 3. NEURO-BEHAVIORAL / SLEEP (CENTRAL CORE) */}
@@ -116,24 +113,22 @@ export const BodyMap: React.FC<BodyMapProps> = ({
                 y="130"
                 width="48"
                 height="45"
-                rx="4"
-                fill="#030712"
+                rx="6"
+                fill="#ffffff"
                 stroke={getStatusColor(zoneStatuses.NEURO_BEHAVIORAL)}
-                strokeWidth={selectedZone === "NEURO_BEHAVIORAL" ? "3" : "1.5"}
-                className={selectedZone === "NEURO_BEHAVIORAL" ? "filter drop-shadow-[0_0_10px_#06b6d4]" : ""}
+                strokeWidth={selectedZone === "NEURO_BEHAVIORAL" ? "3" : "2"}
+                className={selectedZone === "NEURO_BEHAVIORAL" ? "filter drop-shadow-[0_0_8px_rgba(99,102,241,0.4)]" : ""}
               />
-              <circle cx="100" cy="152" r="8" fill="none" stroke={getStatusColor(zoneStatuses.NEURO_BEHAVIORAL)} strokeWidth="1.5" strokeDasharray="2 2" />
+              <circle cx="100" cy="152" r="8" fill="none" stroke={getStatusColor(zoneStatuses.NEURO_BEHAVIORAL)} strokeWidth="1.5" strokeDasharray="3 3" />
             </g>
 
-            {/* 4. IMMUNE / METABOLIC (UPPER LIMBS & PERIPHERY) */}
+            {/* 4. IMMUNE / METABOLIC (UPPER LIMBS) */}
             <g
               onClick={() => onSelectZone("IMMUNE_METABOLIC")}
               className="cursor-pointer transition-transform hover:scale-105"
             >
-              {/* Left Arm */}
-              <line x1="72" y1="70" x2="35" y2="150" stroke={getStatusColor(zoneStatuses.IMMUNE_METABOLIC)} strokeWidth={selectedZone === "IMMUNE_METABOLIC" ? "4" : "2"} />
-              {/* Right Arm */}
-              <line x1="128" y1="70" x2="165" y2="150" stroke={getStatusColor(zoneStatuses.IMMUNE_METABOLIC)} strokeWidth={selectedZone === "IMMUNE_METABOLIC" ? "4" : "2"} />
+              <line x1="72" y1="70" x2="35" y2="150" stroke={getStatusColor(zoneStatuses.IMMUNE_METABOLIC)} strokeWidth={selectedZone === "IMMUNE_METABOLIC" ? "4" : "2.5"} />
+              <line x1="128" y1="70" x2="165" y2="150" stroke={getStatusColor(zoneStatuses.IMMUNE_METABOLIC)} strokeWidth={selectedZone === "IMMUNE_METABOLIC" ? "4" : "2.5"} />
             </g>
 
             {/* 5. MUSCULOSKELETAL / BONE DENSITY (LOWER LIMBS) */}
@@ -141,111 +136,49 @@ export const BodyMap: React.FC<BodyMapProps> = ({
               onClick={() => onSelectZone("MUSCULOSKELETAL")}
               className="cursor-pointer transition-transform hover:scale-105"
             >
-              {/* Left Leg */}
               <line x1="86" y1="175" x2="70" y2="300" stroke={getStatusColor(zoneStatuses.MUSCULOSKELETAL)} strokeWidth={selectedZone === "MUSCULOSKELETAL" ? "4" : "2.5"} />
-              {/* Right Leg */}
               <line x1="114" y1="175" x2="130" y2="300" stroke={getStatusColor(zoneStatuses.MUSCULOSKELETAL)} strokeWidth={selectedZone === "MUSCULOSKELETAL" ? "4" : "2.5"} />
-              {/* Joint Nodes */}
-              <circle cx="78" cy="235" r="4" fill="#030712" stroke={getStatusColor(zoneStatuses.MUSCULOSKELETAL)} strokeWidth="1.5" />
-              <circle cx="122" cy="235" r="4" fill="#030712" stroke={getStatusColor(zoneStatuses.MUSCULOSKELETAL)} strokeWidth="1.5" />
+              <circle cx="78" cy="235" r="4" fill="#ffffff" stroke={getStatusColor(zoneStatuses.MUSCULOSKELETAL)} strokeWidth="2" />
+              <circle cx="122" cy="235" r="4" fill="#ffffff" stroke={getStatusColor(zoneStatuses.MUSCULOSKELETAL)} strokeWidth="2" />
             </g>
           </svg>
 
-          {/* ACTIVE SELECTION TAG */}
-          <div className="absolute bottom-2 left-2 right-2 bg-slate-950/90 border border-slate-800 p-1.5 rounded text-[10px] flex items-center justify-between z-20">
-            <span className="text-slate-400">ACTIVE:</span>
-            <span className="font-bold text-cyan-300 tracking-wider">
+          {/* ACTIVE PILL */}
+          <div className="absolute bottom-2 left-2 right-2 bg-white/95 border border-slate-200/80 p-2 rounded-xl text-xs flex items-center justify-between shadow-sm z-20">
+            <span className="text-slate-400 font-medium">Focused:</span>
+            <span className="font-bold text-slate-800">
               {selectedZone.replace("_", " ")}
             </span>
           </div>
         </div>
 
-        {/* 5-ZONE SELECTOR GRID */}
-        <div className="grid grid-cols-1 gap-1.5 text-[10px]">
-          <button
-            onClick={() => onSelectZone("CARDIOVASCULAR")}
-            className={`p-1.5 border rounded flex items-center justify-between transition ${
-              selectedZone === "CARDIOVASCULAR"
-                ? "bg-cyan-950 border-cyan-400 text-white font-bold shadow-[0_0_10px_rgba(6,182,212,0.2)]"
-                : "bg-black/60 border-slate-800 text-slate-400 hover:border-slate-700"
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <Heart className="w-3.5 h-3.5 text-rose-400" />
-              <span>CARDIOVASCULAR (BP / IJV)</span>
-            </div>
-            <span className={`text-[8px] px-1.5 py-0.2 rounded border font-bold ${getStatusBadge(zoneStatuses.CARDIOVASCULAR)}`}>
-              {zoneStatuses.CARDIOVASCULAR}
-            </span>
-          </button>
-
-          <button
-            onClick={() => onSelectZone("CRANIAL_SANS")}
-            className={`p-1.5 border rounded flex items-center justify-between transition ${
-              selectedZone === "CRANIAL_SANS"
-                ? "bg-cyan-950 border-cyan-400 text-white font-bold shadow-[0_0_10px_rgba(6,182,212,0.2)]"
-                : "bg-black/60 border-slate-800 text-slate-400 hover:border-slate-700"
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <Eye className="w-3.5 h-3.5 text-cyan-400" />
-              <span>CRANIAL / SANS (RETINA)</span>
-            </div>
-            <span className={`text-[8px] px-1.5 py-0.2 rounded border font-bold ${getStatusBadge(zoneStatuses.CRANIAL_SANS)}`}>
-              {zoneStatuses.CRANIAL_SANS}
-            </span>
-          </button>
-
-          <button
-            onClick={() => onSelectZone("NEURO_BEHAVIORAL")}
-            className={`p-1.5 border rounded flex items-center justify-between transition ${
-              selectedZone === "NEURO_BEHAVIORAL"
-                ? "bg-cyan-950 border-cyan-400 text-white font-bold shadow-[0_0_10px_rgba(6,182,212,0.2)]"
-                : "bg-black/60 border-slate-800 text-slate-400 hover:border-slate-700"
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <Brain className="w-3.5 h-3.5 text-purple-400" />
-              <span>NEURO-BEHAVIORAL (SLEEP)</span>
-            </div>
-            <span className={`text-[8px] px-1.5 py-0.2 rounded border font-bold ${getStatusBadge(zoneStatuses.NEURO_BEHAVIORAL)}`}>
-              {zoneStatuses.NEURO_BEHAVIORAL}
-            </span>
-          </button>
-
-          <button
-            onClick={() => onSelectZone("MUSCULOSKELETAL")}
-            className={`p-1.5 border rounded flex items-center justify-between transition ${
-              selectedZone === "MUSCULOSKELETAL"
-                ? "bg-cyan-950 border-cyan-400 text-white font-bold shadow-[0_0_10px_rgba(6,182,212,0.2)]"
-                : "bg-black/60 border-slate-800 text-slate-400 hover:border-slate-700"
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-emerald-400" />
-              <span>MUSCULOSKELETAL (BONE)</span>
-            </div>
-            <span className={`text-[8px] px-1.5 py-0.2 rounded border font-bold ${getStatusBadge(zoneStatuses.MUSCULOSKELETAL)}`}>
-              {zoneStatuses.MUSCULOSKELETAL}
-            </span>
-          </button>
-
-          <button
-            onClick={() => onSelectZone("IMMUNE_METABOLIC")}
-            className={`p-1.5 border rounded flex items-center justify-between transition ${
-              selectedZone === "IMMUNE_METABOLIC"
-                ? "bg-cyan-950 border-cyan-400 text-white font-bold shadow-[0_0_10px_rgba(6,182,212,0.2)]"
-                : "bg-black/60 border-slate-800 text-slate-400 hover:border-slate-700"
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-blue-400" />
-              <span>IMMUNE & METABOLIC</span>
-            </div>
-            <span className={`text-[8px] px-1.5 py-0.2 rounded border font-bold ${getStatusBadge(zoneStatuses.IMMUNE_METABOLIC)}`}>
-              {zoneStatuses.IMMUNE_METABOLIC}
-            </span>
-          </button>
+        {/* 5-ZONE SELECTOR */}
+        <div className="space-y-1.5 text-xs">
+          {[
+            { zone: "CARDIOVASCULAR" as AnatomicalZone, label: "Cardiovascular (BP / IJV)", icon: Heart },
+            { zone: "CRANIAL_SANS" as AnatomicalZone, label: "Cranial / SANS (Retina)", icon: Eye },
+            { zone: "NEURO_BEHAVIORAL" as AnatomicalZone, label: "Neuro-Behavioral (Sleep)", icon: Brain },
+            { zone: "MUSCULOSKELETAL" as AnatomicalZone, label: "Musculoskeletal (Bone)", icon: Activity },
+            { zone: "IMMUNE_METABOLIC" as AnatomicalZone, label: "Immune & Metabolic", icon: Shield },
+          ].map((item) => (
+            <button
+              key={item.zone}
+              onClick={() => onSelectZone(item.zone)}
+              className={`w-full p-2 rounded-xl border flex items-center justify-between transition ${
+                selectedZone === item.zone
+                  ? "bg-indigo-50 border-indigo-200 text-indigo-900 font-semibold shadow-sm"
+                  : "bg-white/60 border-slate-100 text-slate-600 hover:bg-white hover:border-slate-200"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <item.icon className="w-3.5 h-3.5 text-indigo-600" />
+                <span>{item.label}</span>
+              </div>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${getStatusBadge(zoneStatuses[item.zone])}`}>
+                {zoneStatuses[item.zone]}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
     </div>
