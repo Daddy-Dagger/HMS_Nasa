@@ -1,5 +1,5 @@
 import React from "react";
-import { Lock } from "lucide-react";
+import { Lock, Terminal, ShieldCheck } from "lucide-react";
 
 interface ConfessionBoothModalProps {
   isOpen: boolean;
@@ -13,56 +13,58 @@ export const ConfessionBoothModal: React.FC<ConfessionBoothModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-slate-900 border border-cyan-500/60 rounded-xl max-w-lg w-full p-6 text-xs space-y-4 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2 text-cyan-400 font-bold text-sm">
-            <Lock className="w-4 h-4" />
-            <span>CONFESSION BOOTH: ZK-Biometric Enclave</span>
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50 select-none font-mono">
+      <div className="bg-black border border-cyan-500/80 rounded-none max-w-lg w-full p-5 text-xs space-y-4 shadow-[0_0_30px_rgba(6,182,212,0.15)]">
+        {/* HEADER */}
+        <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs tracking-wider">
+            <Lock className="w-3.5 h-3.5" />
+            <span>CONFESSION BOOTH // ZK-BIOMETRIC ENCLAVE</span>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-500 hover:text-white text-base px-2 py-0.5 rounded"
+            className="text-slate-500 hover:text-white text-xs px-2 py-0.5 border border-slate-800"
           >
-            ✕
+            [ESC / CLOSE]
           </button>
         </div>
 
-        <p className="text-slate-300 leading-relaxed">
-          <strong>Resolving the Flight Surgeon Dilemma:</strong> Operators conceal illness to avoid grounding. This enclave keeps raw medical diagnostics encrypted on-body, only sending Zero-Knowledge capability proofs to Mission Control.
-        </p>
-
-        <div className="bg-slate-950 p-3.5 rounded border border-slate-800 space-y-2 font-mono">
+        {/* CRYPTOGRAPHIC STATE */}
+        <div className="bg-slate-950 p-3 border border-slate-800 space-y-2 text-[11px]">
           <div className="flex justify-between text-slate-400">
-            <span>Local Biometric Secret Key:</span>
-            <span className="text-cyan-300">0x7F8C...92A1 (Client-Side Only)</span>
+            <span>ISOLATED ON-BODY KEY:</span>
+            <span className="text-cyan-400">0x7F8C...92A1 [ED25519]</span>
           </div>
           <div className="flex justify-between text-slate-400">
-            <span>Spacecraft OS Broadcast:</span>
-            <span className="text-emerald-400 font-bold">ZK-PROOF: VALID (Capacity: 84%)</span>
+            <span>PUBLIC FLIGHT TELEMETRY:</span>
+            <span className="text-emerald-400 font-bold flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5" /> ZK-PROOF VALID [CAPACITY: 84%]
+            </span>
           </div>
           <div className="flex justify-between text-slate-400">
-            <span>Medical Status Label:</span>
-            <span className="text-slate-200">CONFIDENTIAL (Unindexed)</span>
+            <span>MISSION LOG VISIBILITY:</span>
+            <span className="text-slate-300">UNINDEXED // ZERO CLINICAL DISCLOSURE</span>
           </div>
         </div>
 
-        <div className="border border-slate-800 bg-slate-950/40 p-3 rounded space-y-1.5">
-          <span className="text-cyan-400 font-bold block mb-1">
-            Autonomous Confident Therapeutic Interventions:
-          </span>
-          <p className="text-slate-400 leading-relaxed">
-            • Target: Radiation-induced DNA single-strand breaks & Cortisol elevations.<br />
-            • Automated micro-dispenser loaded: Sub-cutaneous peptide cycle 4B armed.<br />
-            • Public Mission Log output: <span className="text-slate-200 italic">Nominal Routine Calibration</span>.
-          </p>
+        {/* PRIVATE ENCRYPTED DIAGNOSTICS */}
+        <div className="border border-slate-800 bg-slate-950/80 p-3 text-[11px] space-y-1.5">
+          <div className="flex items-center gap-1.5 text-cyan-400 font-bold mb-1">
+            <Terminal className="w-3 h-3" />
+            <span>CONFIDENTIAL RECOVERY PROTOCOL (CREW-ONLY)</span>
+          </div>
+          <div className="text-slate-300 space-y-1 font-mono text-[10px]">
+            <div>• BIOMARKER: RADIATION DNA STRAND-BREAK METABOLITES ELEVATED</div>
+            <div>• SUB-Q DISPENSER: ADAPTOGEN PEPTIDE CYCLE 4B ARMED</div>
+            <div>• LOG HASH: <span className="text-slate-500">SHA256:4a8b...19e0 (RECORDED AS ROUTINE ECLSS DRIFT)</span></div>
+          </div>
         </div>
 
         <button
           onClick={onClose}
-          className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded transition"
+          className="w-full bg-cyan-950 hover:bg-cyan-900 border border-cyan-500 text-cyan-200 font-bold py-2 text-xs uppercase tracking-widest transition"
         >
-          Close Confidential Enclave
+          SEAL ENCLAVE & RESUME COCKPIT
         </button>
       </div>
     </div>
