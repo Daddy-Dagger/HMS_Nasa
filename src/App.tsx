@@ -6,6 +6,10 @@ import {
   Wifi,
   WifiOff,
   Eye,
+  Watch,
+  Monitor,
+  Users,
+  Activity,
 } from "lucide-react";
 import { AnatomicalZone, HealthStatus, EscalationTier } from "./types/mission";
 import { MOCK_30_DAY_MISSION } from "./data/mock30DayMission";
@@ -14,6 +18,18 @@ import { IndicatorDetail } from "./components/IndicatorDetail";
 import { EscalationLadder } from "./components/EscalationLadder";
 import { FlightSurgeonPacketModal } from "./components/FlightSurgeonPacketModal";
 import { SANSExamModal, SANSExamResult } from "./components/SANSExamModal";
+import { WearableWatchHUD } from "./components/WearableWatchHUD";
+import { MedicalProcedureModal } from "./components/MedicalProcedureModal";
+
+type CrewMemberId = "CDR_MILLER" | "PLT_CHEN" | "ENG_KOWALSKI" | "SCI_VANCE";
+
+interface CrewMemberInfo {
+  id: CrewMemberId;
+  name: string;
+  role: string;
+  status: HealthStatus;
+  primaryAlert?: string;
+}
 
 export default function App() {
   // Current Sol (Day 1 to 30)
@@ -27,6 +43,12 @@ export default function App() {
   // Delay mode: LEO real-time vs Deep-Space Mars 20m lag
   const [delayMode, setDelayMode] = useState<"LEO_REALTIME" | "MARS_20M_DELAY">("MARS_20M_DELAY");
 
+  // View mode: Full expedition console vs Minimalist smartwatch / suit-cuff HUD
+  const [viewMode, setViewMode] = useState<"EXPEDITION_CONSOLE" | "WEARABLE_WATCH_HUD">("EXPEDITION_CONSOLE");
+
+  // Active crew member selector
+  const [activeCrew, setActiveCrew] = useState<CrewMemberId>("CDR_MILLER");
+
   // Flight surgeon packet modal
   const [packetOpen, setPacketOpen] = useState<boolean>(false);
 
@@ -34,11 +56,34 @@ export default function App() {
   const [sansExamOpen, setSansExamOpen] = useState<boolean>(false);
   const [sansExamResult, setSansExamResult] = useState<SANSExamResult | null>(null);
 
-  // Current metric for active Sol
+  // Medical procedure step-by-step modal
+  const [procedureModalOpen, setProcedureModalOpen] = useState<boolean>(false);
+  const [activeProcedure, setActiveProcedure] = useState<"LBNP_CHAPS" | "OCULAR_ULTRASOUND" | "CIRCADIAN_LIGHTING">("LBNP_CHAPS");
+
+  // Crew roster
+  const crewRoster: CrewMemberInfo[] = [
+    { id: "CDR_MILLER", name: "CDR MILLER", role: "Mission Commander", status: "CRITICAL", primaryAlert: "BP 142/92 // Sol 18 Drift" },
+    { id: "PLT_CHEN", name: "PLT CHEN", role: "Lunar/Mars Pilot", status: "NOMINAL", primaryAlert: "Baseline 116/74 // Nominal" },
+    { id: "ENG_KOWALSKI", name: "ENG KOWALSKI", role: "Flight Engineer", status: "NOMINAL", primaryAlert: "Sleep 7.1h // Nominal" },
+    { id: "SCI_VANCE", name: "SCI VANCE", role: "Science Specialist", status: "ATTENTION", primaryAlert: "Sleep 5.8h // Mild Debt" },
+  ];
+
+  // Current metric for active Sol (Miller's profile)
   const currentMetric = MOCK_30_DAY_MISSION[currentSol - 1] || MOCK_30_DAY_MISSION[0];
 
   // Dynamic zone statuses computed from currentSol telemetry
   const computeZoneStatuses = (): Record<AnatomicalZone, HealthStatus> => {
+    if (activeCrew !== "CDR_MILLER") {
+      // Nominal other crew members
+      return {
+        CARDIOVASCULAR: activeCrew === "SCI_VANCE" ? "ATTENTION" : "NOMINAL",
+        CRANIAL_SANS: "NOMINAL",
+        NEURO_BEHAVIORAL: activeCrew === "SCI_VANCE" ? "ATTENTION" : "NOMINAL",
+        MUSCULOSKELETAL: "NOMINAL",
+        IMMUNE_METABOLIC: "NOMINAL",
+      };
+    }
+
     const isCriticalBP = currentMetric.systolicBP >= 140;
     const isWarnBP = currentMetric.systolicBP >= 128;
     const isSevereSleep = currentMetric.sleepHours < 5.0;
@@ -95,21 +140,45 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-black text-slate-100 p-3 md:p-4 flex flex-col justify-between font-mono select-none antialiased">
-      {/* APEX HEADER WITH DELAY-MODE TOGGLE */}
-      <header className="border border-slate-800 bg-slate-950 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs mb-3">
+      {/* APEX HEADER WITH FORM-FACTOR & DELAY-MODE TOGGLES */}
+      <header className="border border-slate-800 bg-slate-950 px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-xs mb-3">
         <div className="flex items-center gap-3">
           <span className="h-2 w-2 bg-cyan-400 rounded-none shadow-[0_0_8px_#22d3ee]" />
           <span className="font-bold tracking-widest text-white uppercase">
             AEGIS // DEEP-SPACE MEDICAL GLASS
           </span>
           <span className="text-slate-600">|</span>
-          <span className="text-slate-400">SUBJECT: CDR MILLER (VEHICLE 01)</span>
+
+          {/* VIEW MODE TOGGLE (EXPEDITION WORKSTATION VS WEARABLE SMARTWATCH) */}
+          <div className="flex items-center gap-1 bg-black p-0.5 border border-slate-800 rounded">
+            <button
+              onClick={() => setViewMode("EXPEDITION_CONSOLE")}
+              className={`px-2 py-0.5 text-[10px] flex items-center gap-1 transition ${
+                viewMode === "EXPEDITION_CONSOLE"
+                  ? "bg-cyan-950 text-cyan-300 font-bold border border-cyan-600"
+                  : "text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              <Monitor className="w-3 h-3" />
+              <span>CONSOLE</span>
+            </button>
+            <button
+              onClick={() => setViewMode("WEARABLE_WATCH_HUD")}
+              className={`px-2 py-0.5 text-[10px] flex items-center gap-1 transition ${
+                viewMode === "WEARABLE_WATCH_HUD"
+                  ? "bg-cyan-950 text-cyan-300 font-bold border border-cyan-600"
+                  : "text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              <Watch className="w-3 h-3" />
+              <span>WATCH HUD</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4 text-[11px]">
+        <div className="flex items-center gap-3 text-[11px]">
           {/* DELAY-MODE TOGGLE */}
-          <div className="flex items-center gap-2">
-            <span className="text-slate-500 uppercase text-[9px] tracking-wider">COMMS ENVELOPE:</span>
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() =>
                 setDelayMode(delayMode === "MARS_20M_DELAY" ? "LEO_REALTIME" : "MARS_20M_DELAY")
@@ -123,12 +192,12 @@ export default function App() {
               {delayMode === "MARS_20M_DELAY" ? (
                 <>
                   <WifiOff className="w-3 h-3 text-amber-400" />
-                  <span>MARS 20m LAG [100% AUTONOMOUS]</span>
+                  <span>MARS 20m LAG</span>
                 </>
               ) : (
                 <>
                   <Wifi className="w-3 h-3 text-cyan-400" />
-                  <span>LEO REAL-TIME [MCC LINKED]</span>
+                  <span>LEO REAL-TIME</span>
                 </>
               )}
             </button>
@@ -137,16 +206,28 @@ export default function App() {
           {/* SANS OCULAR EXAM BUTTON */}
           <button
             onClick={() => setSansExamOpen(true)}
-            className="flex items-center gap-1.5 bg-cyan-950/70 border border-cyan-500 hover:border-cyan-400 text-cyan-200 px-2 py-1 text-[10px] transition font-bold shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+            className="flex items-center gap-1.5 bg-cyan-950/70 border border-cyan-500 hover:border-cyan-400 text-cyan-200 px-2 py-0.5 text-[10px] transition font-bold shadow-[0_0_10px_rgba(6,182,212,0.2)]"
           >
             <Eye className="w-3 h-3 text-cyan-400" />
-            <span>SANS OCULAR EXAM</span>
+            <span>SANS EXAM</span>
+          </button>
+
+          {/* PROCEDURE GUIDE BUTTON */}
+          <button
+            onClick={() => {
+              setActiveProcedure(currentTier === 2 ? "OCULAR_ULTRASOUND" : "LBNP_CHAPS");
+              setProcedureModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 bg-emerald-950/70 border border-emerald-500 hover:border-emerald-400 text-emerald-200 px-2 py-0.5 text-[10px] transition font-bold"
+          >
+            <Activity className="w-3 h-3 text-emerald-400" />
+            <span>PROCEDURE GUIDE</span>
           </button>
 
           {/* FLIGHT SURGEON DOSSIER BUTTON */}
           <button
             onClick={() => setPacketOpen(true)}
-            className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 hover:border-cyan-400 text-cyan-300 px-2 py-1 text-[10px] transition"
+            className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 hover:border-cyan-400 text-cyan-300 px-2 py-0.5 text-[10px] transition"
           >
             <FileText className="w-3 h-3 text-cyan-400" />
             <span>GROUND DOSSIER</span>
@@ -154,9 +235,43 @@ export default function App() {
         </div>
       </header>
 
+      {/* MULTI-ASTRONAUT CREW MESH BAR */}
+      <section className="border border-slate-800 bg-slate-950 px-3 py-1.5 mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="flex items-center gap-2">
+          <Users className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">CREW MESH:</span>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          {crewRoster.map((crew) => (
+            <button
+              key={crew.id}
+              onClick={() => setActiveCrew(crew.id)}
+              className={`px-2 py-0.5 border text-[10px] flex items-center gap-1.5 transition ${
+                activeCrew === crew.id
+                  ? "bg-cyan-950 border-cyan-400 text-cyan-100 font-bold shadow-[0_0_8px_rgba(6,182,212,0.3)]"
+                  : "bg-black border-slate-800 text-slate-400 hover:border-slate-700"
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  crew.status === "CRITICAL"
+                    ? "bg-rose-500 animate-pulse"
+                    : crew.status === "ATTENTION"
+                    ? "bg-amber-400"
+                    : "bg-emerald-400"
+                }`}
+              />
+              <span>{crew.name}</span>
+              <span className="text-[9px] text-slate-500">({crew.primaryAlert})</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
       {/* 30-DAY MISSION TIMELINE SCRUBBER (RUBRIC SCENARIO PRESETS) */}
-      <section className="border border-slate-800 bg-slate-950 p-3 mb-3">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+      <section className="border border-slate-800 bg-slate-950 p-2.5 mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsPlaying(!isPlaying)}
@@ -220,45 +335,65 @@ export default function App() {
         />
       </section>
 
-      {/* CORE 3-COLUMN CLINICAL WORKSTATION */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 mb-3">
-        {/* COLUMN 1: INTERACTIVE BODY MAP (3 COLS) */}
-        <div className="lg:col-span-3">
-          <BodyMap
+      {/* MAIN VIEWPORT: EXPEDITION CONSOLE VS WEARABLE WATCH HUD */}
+      {viewMode === "WEARABLE_WATCH_HUD" ? (
+        /* WEARABLE SMARTWATCH / SUIT-CUFF MODE (ULTRA-CLEAN 7-DOT CONSTELLATION) */
+        <div className="flex-1 flex items-center justify-center p-2 mb-3">
+          <WearableWatchHUD
+            currentSol={currentSol}
+            currentMetric={currentMetric}
             selectedZone={selectedZone}
             onSelectZone={setSelectedZone}
             zoneStatuses={zoneStatuses}
-          />
-        </div>
-
-        {/* COLUMN 2: INDICATOR DETAIL & 30-DAY TREND CHARTS (5 COLS) */}
-        <div className="lg:col-span-5">
-          <IndicatorDetail
-            currentSol={currentSol}
-            missionData={MOCK_30_DAY_MISSION}
-            selectedZone={selectedZone}
-          />
-        </div>
-
-        {/* COLUMN 3: THE ESCALATION LADDER (4 COLS) */}
-        <div className="lg:col-span-4">
-          <EscalationLadder
-            currentTier={currentTier}
-            delayMode={delayMode}
-            onTriggerAction={(tier) => {
-              alert(`Escalation Protocol for Tier ${tier} initiated. Telemetry logged to mission record.`);
+            onOpenSANS={() => setSansExamOpen(true)}
+            onOpenProcedure={() => {
+              setActiveProcedure(currentTier === 2 ? "OCULAR_ULTRASOUND" : "LBNP_CHAPS");
+              setProcedureModalOpen(true);
             }}
-            onOpenGroundPacket={() => setPacketOpen(true)}
           />
         </div>
-      </div>
+      ) : (
+        /* EXPEDITION WORKSTATION (FULL 3-COLUMN CLINICAL HUD) */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 mb-3">
+          {/* COLUMN 1: INTERACTIVE BODY MAP & CONSTELLATION GLYPH (3 COLS) */}
+          <div className="lg:col-span-3">
+            <BodyMap
+              selectedZone={selectedZone}
+              onSelectZone={setSelectedZone}
+              zoneStatuses={zoneStatuses}
+            />
+          </div>
+
+          {/* COLUMN 2: INDICATOR DETAIL & 30-DAY TREND CHARTS (5 COLS) */}
+          <div className="lg:col-span-5">
+            <IndicatorDetail
+              currentSol={currentSol}
+              missionData={MOCK_30_DAY_MISSION}
+              selectedZone={selectedZone}
+            />
+          </div>
+
+          {/* COLUMN 3: THE ESCALATION LADDER (4 COLS) */}
+          <div className="lg:col-span-4">
+            <EscalationLadder
+              currentTier={currentTier}
+              delayMode={delayMode}
+              onTriggerAction={(tier) => {
+                setActiveProcedure(tier === 2 ? "OCULAR_ULTRASOUND" : "LBNP_CHAPS");
+                setProcedureModalOpen(true);
+              }}
+              onOpenGroundPacket={() => setPacketOpen(true)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* FOOTER AUDIT BANNER */}
       <footer className="border border-slate-800 bg-slate-950 px-4 py-2 flex flex-wrap items-center justify-between text-[10px] text-slate-400">
         <div className="flex items-center gap-3">
-          <span>ACTIVE HAZARD: <strong className="text-white">NASA RIDGE SPECIFICATION</strong></span>
+          <span>ACTIVE CREW: <strong className="text-white">{activeCrew.replace("_", " ")}</strong></span>
           <span className="text-slate-600">|</span>
-          <span>PROTOCOL: <strong className="text-cyan-400">AUTONOMOUS CREW-CENTRIC GUIDANCE</strong></span>
+          <span>DISPLAY MODE: <strong className="text-cyan-400">{viewMode}</strong></span>
         </div>
         <div>
           <span>NASA HUMAN RESEARCH PROGRAM (HRP) COMPLIANT // ARTEMIS READY</span>
@@ -280,6 +415,16 @@ export default function App() {
         onExamComplete={(result) => {
           setSansExamResult(result);
           setSelectedZone("CRANIAL_SANS");
+        }}
+      />
+
+      {/* ANIMATED MEDICAL PROCEDURE GUIDE MODAL */}
+      <MedicalProcedureModal
+        isOpen={procedureModalOpen}
+        onClose={() => setProcedureModalOpen(false)}
+        procedureType={activeProcedure}
+        onComplete={() => {
+          alert("Procedure completed and logged to mission medical telemetry.");
         }}
       />
     </div>
