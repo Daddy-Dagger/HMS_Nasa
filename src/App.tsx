@@ -15,6 +15,7 @@ import {
 import { AnatomicalZone, HealthStatus, EscalationTier } from "./types/mission";
 import { MOCK_30_DAY_MISSION } from "./data/mock30DayMission";
 import { BodyMap } from "./components/BodyMap";
+import { BodyScanView } from "./components/BodyScanView";
 import { ConstellationGlyph } from "./components/ConstellationGlyph";
 import { IndicatorDetail } from "./components/IndicatorDetail";
 import { EscalationLadder } from "./components/EscalationLadder";
@@ -49,8 +50,8 @@ export default function App() {
   // View mode: Full PC console vs Mobile Handheld vs Minimalist Wearable HUD
   const [viewMode, setViewMode] = useState<"EXPEDITION_CONSOLE" | "MOBILE_PAD" | "WEARABLE_WATCH_HUD">("EXPEDITION_CONSOLE");
 
-  // Console Left Panel Mode: Full Anatomical Map vs 7-Dot Glyph
-  const [consoleLeftMode, setConsoleLeftMode] = useState<"BODY_MAP" | "GLYPH">("BODY_MAP");
+  // Console Left Panel Mode: Full Anatomical Map vs 7-Dot Glyph vs Body Scan
+  const [consoleLeftMode, setConsoleLeftMode] = useState<"BODY_MAP" | "GLYPH" | "BODY_SCAN">("BODY_SCAN");
 
   // Active crew member selector
   const [activeCrew, setActiveCrew] = useState<CrewMemberId>("CDR_MILLER");
@@ -411,6 +412,16 @@ export default function App() {
                 <span className="text-slate-400 font-bold uppercase">ANATOMY DISPLAY:</span>
                 <div className="flex items-center gap-1 bg-black/60 p-0.5 border border-slate-800 rounded">
                   <button
+                    onClick={() => setConsoleLeftMode("BODY_SCAN")}
+                    className={`px-1.5 py-0.5 rounded text-[9px] transition ${
+                      consoleLeftMode === "BODY_SCAN"
+                        ? "bg-cyan-950 text-cyan-300 font-bold"
+                        : "text-slate-500"
+                    }`}
+                  >
+                    SCAN
+                  </button>
+                  <button
                     onClick={() => setConsoleLeftMode("BODY_MAP")}
                     className={`px-1.5 py-0.5 rounded text-[9px] transition ${
                       consoleLeftMode === "BODY_MAP"
@@ -428,12 +439,23 @@ export default function App() {
                         : "text-slate-500"
                     }`}
                   >
-                    7-DOT GLYPH
+                    7-DOT
                   </button>
                 </div>
               </div>
 
-              {consoleLeftMode === "BODY_MAP" ? (
+              {consoleLeftMode === "BODY_SCAN" ? (
+                <div className="rounded-xl overflow-hidden" style={{ background: "linear-gradient(180deg, #fafafa, #f0eef8, #f0f4fa)" }}>
+                  <BodyScanView
+                    currentMetric={currentMetric}
+                    currentSol={currentSol}
+                    zoneStatuses={zoneStatuses}
+                    onSelectZone={setSelectedZone}
+                    selectedZone={selectedZone}
+                    activeCrewName={crewRoster.find((c) => c.id === activeCrew)?.name}
+                  />
+                </div>
+              ) : consoleLeftMode === "BODY_MAP" ? (
                 <BodyMap
                   selectedZone={selectedZone}
                   onSelectZone={setSelectedZone}

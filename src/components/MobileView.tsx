@@ -1,20 +1,19 @@
 import React, { useState } from "react";
 import { AnatomicalZone, HealthStatus, EscalationTier, DailyHealthMetric } from "../types/mission";
-import { ConstellationGlyph } from "./ConstellationGlyph";
+import { BodyScanView } from "./BodyScanView";
 import { IndicatorDetail } from "./IndicatorDetail";
 import { EscalationLadder } from "./EscalationLadder";
-import { BodyMap } from "./BodyMap";
 import {
   Activity,
   Heart,
   Moon,
   Eye,
   FileText,
-  Radio,
-  Users,
-  ShieldAlert,
   ChevronLeft,
   ChevronRight,
+  Scan,
+  BarChart3,
+  Layers,
 } from "lucide-react";
 
 interface MobileViewProps {
@@ -52,221 +51,280 @@ export const MobileView: React.FC<MobileViewProps> = ({
   onOpenProcedure,
   onOpenGroundPacket,
 }) => {
-  // Mobile active tab: "OVERVIEW" | "TELEMETRY" | "ESCALATION" | "BODY_MAP"
-  const [activeTab, setActiveTab] = useState<"OVERVIEW" | "TELEMETRY" | "ESCALATION" | "BODY_MAP">("OVERVIEW");
+  const [activeTab, setActiveTab] = useState<"SCAN" | "DASHBOARD" | "CHARTS" | "TIERS">("SCAN");
 
   const currentMetric = missionData[currentSol - 1] || missionData[0];
   const isCriticalBP = currentMetric.systolicBP >= 140;
+  const isWarnSleep = currentMetric.sleepHours < 5.0;
+
+  const activeCrewInfo = crewRoster.find((c) => c.id === activeCrew);
 
   return (
-    <div className="flex flex-col w-full max-w-md mx-auto min-h-screen pb-24 font-mono select-none">
-      {/* MOBILE TOP STATUS BAR */}
-      <div className="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md border-b border-cyan-500/20 px-3 py-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#06b6d4]" />
-          <span className="font-bold text-xs text-white tracking-wider">AEGIS MOBILE</span>
+    <div
+      className="flex flex-col w-full max-w-md mx-auto min-h-screen pb-36 select-none"
+      style={{
+        background: "linear-gradient(180deg, #fafafa 0%, #f0eef8 30%, #f0f4fa 60%, #fdf0ee 100%)",
+        fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+      }}
+    >
+      {/* CLEAN TOP HEADER */}
+      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-200/60 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          {/* Aurora icon */}
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm"
+            style={{ background: "linear-gradient(135deg, #c4b5fd, #fda4af, #93c5fd)" }}
+          >
+            <span className="text-white text-xs font-bold">A</span>
+          </div>
+          <div>
+            <span className="font-semibold text-gray-900 text-sm">AEGIS</span>
+            <span className="text-xs text-gray-400 ml-1.5 font-medium">Sol {currentSol}</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
-          {/* COMMS LAG BUTTON */}
+        <div className="flex items-center gap-2">
           <button
             onClick={onToggleDelay}
-            className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 transition ${
+            className={`text-[10px] font-medium px-2.5 py-1 rounded-full border transition ${
               delayMode === "MARS_20M_DELAY"
-                ? "bg-amber-950/80 border-amber-500/60 text-amber-300"
-                : "bg-cyan-950/80 border-cyan-500/60 text-cyan-300"
+                ? "bg-amber-50 border-amber-200 text-amber-700"
+                : "bg-emerald-50 border-emerald-200 text-emerald-700"
             }`}
           >
-            <Radio className="w-2.5 h-2.5" />
-            <span>{delayMode === "MARS_20M_DELAY" ? "20m LAG" : "LEO REAL"}</span>
+            {delayMode === "MARS_20M_DELAY" ? "20m lag" : "Real-time"}
           </button>
-
-          {/* ACTIVE SOL PILL */}
-          <div className="bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 px-2 py-0.5 rounded text-[10px] font-bold">
-            SOL {currentSol}/30
+          <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-bold shadow-sm">
+            {activeCrewInfo?.name?.charAt(4) || "M"}
           </div>
         </div>
       </div>
 
-      {/* HORIZONTAL CREW SELECTOR SCROLLER */}
-      <div className="flex items-center gap-1.5 overflow-x-auto py-2 px-3 border-b border-slate-900 bg-black/60">
-        <div className="flex items-center gap-1 text-[10px] text-slate-500 pr-1 shrink-0">
-          <Users className="w-3 h-3 text-cyan-400" />
-          <span>CREW:</span>
-        </div>
+      {/* CREW SELECTOR — horizontal pills */}
+      <div className="flex items-center gap-2 overflow-x-auto py-2.5 px-4 scrollbar-hide">
         {crewRoster.map((crew) => (
           <button
             key={crew.id}
             onClick={() => onSelectCrew(crew.id)}
-            className={`px-2.5 py-1 rounded text-[10px] shrink-0 border flex items-center gap-1.5 transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap border transition ${
               activeCrew === crew.id
-                ? "bg-cyan-950 border-cyan-400 text-white font-bold shadow-[0_0_8px_rgba(6,182,212,0.3)]"
-                : "bg-slate-950 border-slate-800 text-slate-400"
+                ? "bg-gray-900 text-white border-gray-900 shadow-md font-medium"
+                : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
             }`}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full ${
                 crew.status === "CRITICAL"
-                  ? "bg-rose-500 animate-pulse"
+                  ? "bg-red-500 animate-pulse"
                   : crew.status === "ATTENTION"
-                  ? "bg-amber-400"
-                  : "bg-emerald-400"
+                  ? "bg-amber-500"
+                  : "bg-emerald-500"
               }`}
             />
-            <span>{crew.name.replace("CDR ", "").replace("PLT ", "").replace("ENG ", "").replace("SCI ", "")}</span>
+            <span>{crew.name.split(" ")[1] || crew.name}</span>
           </button>
         ))}
       </div>
 
-      {/* TIMELINE SOL SCRUBBER STEPPER */}
-      <div className="px-3 py-2 bg-slate-950/50 border-b border-slate-800/80 flex items-center justify-between text-xs">
+      {/* SOL STEPPER */}
+      <div className="px-4 py-2 flex items-center justify-between">
         <button
           onClick={() => onSelectSol(Math.max(1, currentSol - 1))}
           disabled={currentSol <= 1}
-          className="p-1 rounded bg-black border border-slate-800 text-slate-300 disabled:opacity-30"
+          className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 disabled:opacity-30 hover:bg-gray-50 transition shadow-sm"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
 
         <div className="flex flex-col items-center">
-          <span className="text-[11px] font-bold text-white">
-            MISSION SOL <span className="text-cyan-400">{currentSol}</span>
+          <span className="text-sm font-semibold text-gray-900">
+            Mission Day <span className="text-indigo-600">{currentSol}</span>
           </span>
-          <span className="text-[9px] text-slate-500">
-            {currentSol <= 7 ? "Space Adaptation Baseline" : currentSol === 8 ? "Sensor Motion Glitch" : currentSol <= 21 ? "Sleep Fragmentation" : currentSol <= 24 ? "Critical BP Spike" : "Stabilization"}
+          <span className="text-[11px] text-gray-400 font-medium">
+            {currentSol <= 7
+              ? "Adaptation baseline"
+              : currentSol === 8
+              ? "Sensor glitch"
+              : currentSol <= 21
+              ? "Sleep fragmentation"
+              : currentSol <= 24
+              ? "Critical BP spike"
+              : "Stabilization"}
           </span>
         </div>
 
         <button
           onClick={() => onSelectSol(Math.min(30, currentSol + 1))}
           disabled={currentSol >= 30}
-          className="p-1 rounded bg-black border border-slate-800 text-slate-300 disabled:opacity-30"
+          className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 disabled:opacity-30 hover:bg-gray-50 transition shadow-sm"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
-      {/* SENSOR INTEGRITY NOTIFICATION */}
-      {currentMetric.alertSuppressed && (
-        <div className="mx-3 mt-2 px-2.5 py-1.5 bg-amber-950/60 border border-amber-500/60 rounded-lg flex items-center gap-2 text-[10px] text-amber-200 animate-pulse">
-          <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span>ALERT SUPPRESSED: Motion artifact detected (SQM: {currentMetric.sensorConfidence}%)</span>
-        </div>
-      )}
-
-      {/* MOBILE SEGMENTED VIEW TAB SELECTOR */}
-      <div className="grid grid-cols-4 gap-1 p-3 text-[10px]">
-        <button
-          onClick={() => setActiveTab("OVERVIEW")}
-          className={`py-1.5 rounded border transition font-bold ${
-            activeTab === "OVERVIEW"
-              ? "bg-cyan-950 border-cyan-400 text-cyan-200"
-              : "bg-black/60 border-slate-800 text-slate-400"
-          }`}
-        >
-          GLYPH
-        </button>
-        <button
-          onClick={() => setActiveTab("BODY_MAP")}
-          className={`py-1.5 rounded border transition font-bold ${
-            activeTab === "BODY_MAP"
-              ? "bg-cyan-950 border-cyan-400 text-cyan-200"
-              : "bg-black/60 border-slate-800 text-slate-400"
-          }`}
-        >
-          ANATOMY
-        </button>
-        <button
-          onClick={() => setActiveTab("TELEMETRY")}
-          className={`py-1.5 rounded border transition font-bold ${
-            activeTab === "TELEMETRY"
-              ? "bg-cyan-950 border-cyan-400 text-cyan-200"
-              : "bg-black/60 border-slate-800 text-slate-400"
-          }`}
-        >
-          CHARTS
-        </button>
-        <button
-          onClick={() => setActiveTab("ESCALATION")}
-          className={`py-1.5 rounded border transition font-bold ${
-            activeTab === "ESCALATION"
-              ? "bg-cyan-950 border-cyan-400 text-cyan-200"
-              : "bg-black/60 border-slate-800 text-slate-400"
-          }`}
-        >
-          TIERS
-        </button>
+      {/* TAB BAR — clean pills */}
+      <div className="flex items-center gap-1.5 px-4 py-1.5">
+        {(
+          [
+            { key: "SCAN", icon: Scan, label: "Body scan" },
+            { key: "DASHBOARD", icon: Heart, label: "Vitals" },
+            { key: "CHARTS", icon: BarChart3, label: "Trends" },
+            { key: "TIERS", icon: Layers, label: "Escalation" },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-medium transition ${
+              activeTab === tab.key
+                ? "bg-white text-gray-900 shadow-sm border border-gray-200"
+                : "text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            <tab.icon className="w-3.5 h-3.5" />
+            <span>{tab.label}</span>
+          </button>
+        ))}
       </div>
 
-      {/* MAIN TAB CONTENT */}
-      <div className="px-3 flex-1">
-        {/* TAB 1: OVERVIEW & 7-DOT CONSTELLATION */}
-        {activeTab === "OVERVIEW" && (
-          <div className="flex flex-col gap-3">
-            {/* GLYPH CARD */}
-            <div className="bg-slate-950 border border-cyan-500/20 rounded-2xl p-4 flex flex-col items-center relative shadow-[0_0_20px_rgba(6,182,212,0.08)]">
-              <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold self-start mb-2">
-                7-DOT TELEMETRY GLYPH
-              </span>
-              <ConstellationGlyph
-                selectedZone={selectedZone}
-                onSelectZone={onSelectZone}
-                zoneStatuses={zoneStatuses}
-                compact={true}
-              />
+      {/* MAIN CONTENT */}
+      <div className="px-2 flex-1 mt-1">
+        {/* TAB 1: BODY SCAN — the hero view */}
+        {activeTab === "SCAN" && (
+          <BodyScanView
+            currentMetric={currentMetric}
+            currentSol={currentSol}
+            zoneStatuses={zoneStatuses}
+            onSelectZone={onSelectZone}
+            selectedZone={selectedZone}
+            activeCrewName={activeCrewInfo?.name}
+          />
+        )}
+
+        {/* TAB 2: VITALS DASHBOARD — clean cards */}
+        {activeTab === "DASHBOARD" && (
+          <div className="px-2 space-y-3">
+            <h2 className="text-lg font-semibold text-gray-900 pt-2">
+              Today's vitals
+              <span className="text-gray-400 font-normal text-sm ml-2">Sol {currentSol}</span>
+            </h2>
+
+            {/* RECOVERY SCORE CARD */}
+            <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 border border-gray-200/60 shadow-sm">
+              <span className="text-xs text-gray-500 font-medium">Recovery score</span>
+              <div className="flex items-center justify-between mt-1">
+                <div>
+                  <span className="text-4xl font-bold text-gray-900">
+                    {Math.max(
+                      20,
+                      Math.round(
+                        100 - (140 - currentMetric.systolicBP) * 0.5 - (8 - currentMetric.sleepHours) * 5
+                      )
+                    )}
+                  </span>
+                  <span className="text-lg text-gray-400 font-medium">/100</span>
+                </div>
+                <div className="w-14 h-14 relative">
+                  <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                    <path
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="#e5e7eb"
+                      strokeWidth="3"
+                    />
+                    <path
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke={isCriticalBP ? "#ef4444" : "#818cf8"}
+                      strokeWidth="3"
+                      strokeDasharray={`${Math.max(
+                        20,
+                        Math.round(
+                          100 - (140 - currentMetric.systolicBP) * 0.5 - (8 - currentMetric.sleepHours) * 5
+                        )
+                      )}, 100`}
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 mt-1">
+                <span className={`w-1.5 h-1.5 rounded-full ${isCriticalBP ? "bg-red-500" : "bg-emerald-500"}`} />
+                <span className={`text-xs font-medium ${isCriticalBP ? "text-red-600" : "text-emerald-600"}`}>
+                  {isCriticalBP ? "Intervention needed" : "Ready for duty"}
+                </span>
+              </div>
             </div>
 
-            {/* QUICK STATS 2x2 GRID */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            {/* 2x1 VITAL CARDS */}
+            <div className="grid grid-cols-2 gap-3">
               <div
                 onClick={() => onSelectZone("CARDIOVASCULAR")}
-                className={`p-3 rounded-xl border cursor-pointer transition ${
-                  isCriticalBP
-                    ? "bg-rose-950/60 border-rose-500/80 animate-pulse"
-                    : "bg-slate-950 border-slate-800"
-                }`}
+                className="rounded-2xl p-3.5 border border-white/60 shadow-sm cursor-pointer hover:shadow-md transition"
+                style={{
+                  background: isCriticalBP
+                    ? "linear-gradient(135deg, #fef2f2, #fce7f3)"
+                    : "linear-gradient(135deg, #eff6ff, #f0f4ff, #fce7f3)",
+                }}
               >
-                <div className="flex items-center gap-1.5 text-slate-400 text-[10px] mb-1">
-                  <Heart className="w-3.5 h-3.5 text-rose-400" />
-                  <span>BLOOD PRESSURE</span>
-                </div>
-                <div className="text-base font-bold text-white">
-                  {currentMetric.systolicBP}/{currentMetric.diastolicBP} <span className="text-[10px] text-slate-400">mmHg</span>
-                </div>
-                <span className="text-[9px] text-slate-500">{isCriticalBP ? "Breached >140" : "Within bounds"}</span>
+                <Heart className="w-5 h-5 text-rose-400 mb-2" />
+                <span className="text-xs text-gray-500 block">Blood pressure</span>
+                <span className={`text-2xl font-bold ${isCriticalBP ? "text-red-600" : "text-gray-900"}`}>
+                  {currentMetric.systolicBP}
+                  <span className="text-sm text-gray-400">/{currentMetric.diastolicBP}</span>
+                </span>
+                <span className="text-[10px] text-gray-400 block mt-0.5">mmHg</span>
               </div>
 
               <div
-                onClick={() => onSelectZone("NEURO_BEHAVIORAL")}
-                className="p-3 rounded-xl border bg-slate-950 border-slate-800 cursor-pointer"
+                onClick={() => onSelectZone("CARDIOVASCULAR")}
+                className="bg-white/80 backdrop-blur-xl rounded-2xl p-3.5 border border-gray-200/60 shadow-sm cursor-pointer"
               >
-                <div className="flex items-center gap-1.5 text-slate-400 text-[10px] mb-1">
-                  <Moon className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>SLEEP</span>
+                <Activity className="w-5 h-5 text-indigo-400 mb-2" />
+                <span className="text-xs text-gray-500 block">Heart rate</span>
+                <span className="text-2xl font-bold text-gray-900">{currentMetric.heartRate}</span>
+                <span className="text-[10px] text-gray-400 block mt-0.5">bpm</span>
+              </div>
+            </div>
+
+            {/* SLEEP CARD — wide */}
+            <div
+              onClick={() => onSelectZone("NEURO_BEHAVIORAL")}
+              className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 border border-gray-200/60 shadow-sm cursor-pointer flex items-center justify-between"
+            >
+              <div>
+                <Moon className="w-5 h-5 text-indigo-400 mb-1.5" />
+                <span className="text-xs text-gray-500 block">Sleep duration</span>
+                <div className="flex items-baseline gap-1">
+                  <span className={`text-2xl font-bold ${isWarnSleep ? "text-amber-600" : "text-gray-900"}`}>
+                    {currentMetric.sleepHours}h
+                  </span>
+                  {isWarnSleep && (
+                    <span className="text-[10px] text-red-500 font-medium">
+                      −{(8 - currentMetric.sleepHours).toFixed(1)}h vs std
+                    </span>
+                  )}
                 </div>
-                <div className="text-base font-bold text-white">
-                  {currentMetric.sleepHours} <span className="text-[10px] text-slate-400">hours</span>
-                </div>
-                <span className="text-[9px] text-slate-500">Standard: 8.0h</span>
+              </div>
+              <div className="w-24 h-10 flex items-end gap-0.5">
+                {missionData.slice(Math.max(0, currentSol - 7), currentSol).map((d, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 rounded-sm transition-all"
+                    style={{
+                      height: `${(d.sleepHours / 8) * 100}%`,
+                      background: d.sleepHours < 5 ? "#f59e0b" : "#818cf8",
+                      opacity: 0.5 + (i / 7) * 0.5,
+                    }}
+                  />
+                ))}
               </div>
             </div>
           </div>
         )}
 
-        {/* TAB 2: ANATOMICAL BODY MAP */}
-        {activeTab === "BODY_MAP" && (
-          <div className="bg-slate-950 border border-cyan-500/20 rounded-2xl p-3">
-            <BodyMap
-              selectedZone={selectedZone}
-              onSelectZone={onSelectZone}
-              zoneStatuses={zoneStatuses}
-            />
-          </div>
-        )}
-
-        {/* TAB 3: TELEMETRY & CHARTS */}
-        {activeTab === "TELEMETRY" && (
-          <div className="bg-slate-950 border border-cyan-500/20 rounded-2xl p-3">
+        {/* TAB 3: TELEMETRY CHARTS */}
+        {activeTab === "CHARTS" && (
+          <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/60 shadow-sm p-3 mx-2">
             <IndicatorDetail
               currentSol={currentSol}
               missionData={missionData}
@@ -275,9 +333,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
           </div>
         )}
 
-        {/* TAB 4: ESCALATION LADDER */}
-        {activeTab === "ESCALATION" && (
-          <div className="bg-slate-950 border border-cyan-500/20 rounded-2xl p-3">
+        {/* TAB 4: ESCALATION TIERS */}
+        {activeTab === "TIERS" && (
+          <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/60 shadow-sm p-3 mx-2">
             <EscalationLadder
               currentTier={currentTier}
               delayMode={delayMode}
@@ -288,30 +346,30 @@ export const MobileView: React.FC<MobileViewProps> = ({
         )}
       </div>
 
-      {/* FLOATING MOBILE ACTION DOCK */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-lg border-t border-cyan-500/30 p-2.5 flex items-center justify-center gap-2 max-w-md mx-auto">
+      {/* FLOATING ACTION DOCK */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-xl border-t border-gray-200/60 p-3 flex items-center justify-center gap-2 max-w-md mx-auto shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         <button
           onClick={onOpenProcedure}
-          className="flex-1 py-2 px-2 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/80 text-emerald-200 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 shadow-[0_0_12px_rgba(16,185,129,0.2)] transition active:scale-95"
+          className="flex-1 py-2.5 bg-gray-900 text-white rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-gray-800 active:scale-[0.98] transition shadow-sm"
         >
-          <Activity className="w-3.5 h-3.5 text-emerald-400" />
-          <span>PROCEDURE</span>
+          <Activity className="w-3.5 h-3.5" />
+          <span>Procedure</span>
         </button>
 
         <button
           onClick={onOpenSANS}
-          className="flex-1 py-2 px-2 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/80 text-cyan-200 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 shadow-[0_0_12px_rgba(6,182,212,0.2)] transition active:scale-95"
+          className="flex-1 py-2.5 bg-indigo-600 text-white rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-indigo-500 active:scale-[0.98] transition shadow-sm"
         >
-          <Eye className="w-3.5 h-3.5 text-cyan-400" />
-          <span>SANS EXAM</span>
+          <Eye className="w-3.5 h-3.5" />
+          <span>SANS exam</span>
         </button>
 
         <button
           onClick={onOpenGroundPacket}
-          className="py-2 px-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 transition active:scale-95"
+          className="py-2.5 px-4 bg-white text-gray-700 border border-gray-200 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-gray-50 active:scale-[0.98] transition shadow-sm"
         >
-          <FileText className="w-3.5 h-3.5 text-cyan-400" />
-          <span>DOSSIER</span>
+          <FileText className="w-3.5 h-3.5" />
+          <span>Dossier</span>
         </button>
       </div>
     </div>
