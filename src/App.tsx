@@ -5,6 +5,7 @@ import {
   FileText,
   Wifi,
   WifiOff,
+  Eye,
 } from "lucide-react";
 import { AnatomicalZone, HealthStatus, EscalationTier } from "./types/mission";
 import { MOCK_30_DAY_MISSION } from "./data/mock30DayMission";
@@ -12,6 +13,7 @@ import { BodyMap } from "./components/BodyMap";
 import { IndicatorDetail } from "./components/IndicatorDetail";
 import { EscalationLadder } from "./components/EscalationLadder";
 import { FlightSurgeonPacketModal } from "./components/FlightSurgeonPacketModal";
+import { SANSExamModal, SANSExamResult } from "./components/SANSExamModal";
 
 export default function App() {
   // Current Sol (Day 1 to 30)
@@ -28,6 +30,10 @@ export default function App() {
   // Flight surgeon packet modal
   const [packetOpen, setPacketOpen] = useState<boolean>(false);
 
+  // SANS Ocular Exam modal & result
+  const [sansExamOpen, setSansExamOpen] = useState<boolean>(false);
+  const [sansExamResult, setSansExamResult] = useState<SANSExamResult | null>(null);
+
   // Current metric for active Sol
   const currentMetric = MOCK_30_DAY_MISSION[currentSol - 1] || MOCK_30_DAY_MISSION[0];
 
@@ -38,9 +44,19 @@ export default function App() {
     const isSevereSleep = currentMetric.sleepHours < 5.0;
     const isWarnSleep = currentMetric.sleepHours < 6.5;
 
+    const sansStatus: HealthStatus = sansExamResult
+      ? sansExamResult.sansStage === "STAGE_2_MODERATE"
+        ? "CRITICAL"
+        : sansExamResult.sansStage === "STAGE_1_MILD"
+        ? "ATTENTION"
+        : "NOMINAL"
+      : isCriticalBP
+      ? "ATTENTION"
+      : "NOMINAL";
+
     return {
       CARDIOVASCULAR: isCriticalBP ? "CRITICAL" : isWarnBP ? "ATTENTION" : "NOMINAL",
-      CRANIAL_SANS: isCriticalBP ? "ATTENTION" : "NOMINAL",
+      CRANIAL_SANS: sansStatus,
       NEURO_BEHAVIORAL: isSevereSleep ? "CRITICAL" : isWarnSleep ? "ATTENTION" : "NOMINAL",
       MUSCULOSKELETAL: currentSol > 20 ? "ATTENTION" : "NOMINAL",
       IMMUNE_METABOLIC: currentMetric.bloodSugar > 115 ? "ATTENTION" : "NOMINAL",
@@ -117,6 +133,15 @@ export default function App() {
               )}
             </button>
           </div>
+
+          {/* SANS OCULAR EXAM BUTTON */}
+          <button
+            onClick={() => setSansExamOpen(true)}
+            className="flex items-center gap-1.5 bg-cyan-950/70 border border-cyan-500 hover:border-cyan-400 text-cyan-200 px-2 py-1 text-[10px] transition font-bold shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+          >
+            <Eye className="w-3 h-3 text-cyan-400" />
+            <span>SANS OCULAR EXAM</span>
+          </button>
 
           {/* FLIGHT SURGEON DOSSIER BUTTON */}
           <button
@@ -246,6 +271,16 @@ export default function App() {
         onClose={() => setPacketOpen(false)}
         currentSol={currentSol}
         missionData={MOCK_30_DAY_MISSION}
+      />
+
+      {/* SANS OCULAR EXAM MODAL */}
+      <SANSExamModal
+        isOpen={sansExamOpen}
+        onClose={() => setSansExamOpen(false)}
+        onExamComplete={(result) => {
+          setSansExamResult(result);
+          setSelectedZone("CRANIAL_SANS");
+        }}
       />
     </div>
   );
