@@ -10,7 +10,7 @@ import {
   ComposedChart,
 } from "recharts";
 import { DailyHealthMetric, AnatomicalZone } from "../types/mission";
-import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, Activity } from "lucide-react";
 
 interface IndicatorDetailProps {
   currentSol: number;
@@ -99,132 +99,125 @@ export const IndicatorDetail: React.FC<IndicatorDetailProps> = ({
   const historyData = missionData.slice(0, currentSol);
 
   return (
-    <div className="h-full bg-black border border-slate-800 p-4 font-mono select-none flex flex-col justify-between">
+    <div className="h-full bg-slate-950/80 backdrop-blur-md border border-cyan-500/20 rounded-xl p-4 font-mono select-none flex flex-col justify-between shadow-[0_0_25px_rgba(6,182,212,0.06)] relative overflow-hidden">
+      {/* CORNER ACCENTS */}
+      <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-cyan-400" />
+      <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-cyan-400" />
+
       <div>
-        {/* HEADER & SIGNAL QUALITY METRIC (SQM) */}
-        <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-2 mb-3 gap-2">
-          <div>
-            <span className="text-[10px] text-cyan-400 font-bold block">{config.title}</span>
-            <span className="text-[9px] text-slate-500">SOL {currentSol} OF 30 // NASA HRP CALIBRATED</span>
+        {/* HEADER BAR */}
+        <div className="flex flex-wrap items-center justify-between border-b border-slate-800/80 pb-2 mb-3 gap-2">
+          <div className="flex items-center gap-2">
+            <Activity className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="text-[11px] font-bold tracking-widest text-white uppercase">
+              {config.title}
+            </span>
           </div>
 
-          {/* CONFIDENCE BADGE & ALERT SUPPRESSION */}
           <div className="flex items-center gap-2">
-            <div
-              className={`px-2 py-0.5 border text-[10px] font-bold flex items-center gap-1 ${
-                currentMetric.sensorConfidence > 85
-                  ? "bg-emerald-950/80 text-emerald-300 border-emerald-600"
-                  : currentMetric.sensorConfidence > 50
-                  ? "bg-amber-950/80 text-amber-300 border-amber-600"
-                  : "bg-rose-950 text-rose-300 border-rose-600 animate-pulse"
+            {/* SENSOR CONFIDENCE BADGE */}
+            <span
+              className={`text-[9px] px-2 py-0.5 rounded border font-bold flex items-center gap-1 ${
+                currentMetric.sensorConfidence < 60
+                  ? "bg-rose-950/80 text-rose-300 border-rose-500 animate-pulse"
+                  : currentMetric.sensorConfidence < 85
+                  ? "bg-amber-950/80 text-amber-300 border-amber-500"
+                  : "bg-cyan-950/80 text-cyan-300 border-cyan-600"
               }`}
             >
-              <span>SQM CONFIDENCE: {currentMetric.sensorConfidence}%</span>
-            </div>
+              {currentMetric.sensorConfidence >= 85 ? (
+                <CheckCircle2 className="w-3 h-3 text-cyan-400" />
+              ) : (
+                <AlertTriangle className="w-3 h-3 text-amber-400" />
+              )}
+              SQM CONFIDENCE: {currentMetric.sensorConfidence}%
+            </span>
 
+            {/* ALERT SUPPRESSION FLAG */}
             {currentMetric.alertSuppressed && (
-              <span className="bg-amber-950 text-amber-300 border border-amber-600 px-1.5 py-0.5 text-[9px] font-bold animate-pulse">
+              <span className="text-[9px] px-2 py-0.5 bg-amber-950/90 text-amber-300 border border-amber-500 font-bold animate-pulse rounded">
                 [ALERT SUPPRESSED: MOTION ARTIFACT]
               </span>
             )}
           </div>
         </div>
 
-        {/* PRIMARY VALUE READOUT & BASELINE THRESHOLD PILLS */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3 text-[11px]">
-          <div className="bg-slate-950 border border-slate-800 p-2">
-            <span className="text-slate-500 text-[9px] block">CURRENT VALUE</span>
-            <span className="text-white font-bold text-sm">{config.currentVal}</span>
+        {/* CURRENT METRIC CALLOUT & STATS */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+          <div className="bg-black/70 border border-slate-800/80 p-2.5 rounded-lg">
+            <span className="text-[9px] text-slate-400 block mb-0.5">CURRENT LEVEL</span>
+            <span className="text-base font-bold text-white tracking-wide">{config.currentVal}</span>
           </div>
-
-          <div className="bg-slate-950 border border-slate-800 p-2">
-            <span className="text-slate-500 text-[9px] block">NASA STANDARD</span>
-            <span className="text-cyan-400 font-bold">{config.baselineVal} {config.unit}</span>
+          <div className="bg-black/70 border border-slate-800/80 p-2.5 rounded-lg">
+            <span className="text-[9px] text-slate-400 block mb-0.5">ASTRONAUT BASELINE</span>
+            <span className="text-base font-bold text-cyan-400">{config.baselineVal} {config.unit}</span>
           </div>
-
-          <div className="bg-slate-950 border border-slate-800 p-2">
-            <span className="text-slate-500 text-[9px] block">CRITICAL THRESHOLD</span>
-            <span className="text-rose-400 font-bold">{config.thresholdVal} {config.unit}</span>
+          <div className="bg-black/70 border border-slate-800/80 p-2.5 rounded-lg">
+            <span className="text-[9px] text-slate-400 block mb-0.5">CRITICAL THRESHOLD</span>
+            <span className="text-base font-bold text-rose-400">{config.thresholdVal} {config.unit}</span>
           </div>
-
-          <div className="bg-slate-950 border border-slate-800 p-2">
-            <span className="text-slate-500 text-[9px] block">SIGNAL INTEGRITY</span>
-            <span className={currentMetric.sensorConfidence > 75 ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
-              {currentMetric.sensorConfidence > 75 ? "VERIFIED TELEMETRY" : "ARTIFACT DETECTED"}
-            </span>
+          <div className="bg-black/70 border border-slate-800/80 p-2.5 rounded-lg">
+            <span className="text-[9px] text-slate-400 block mb-0.5">SAMPLING RATE</span>
+            <span className="text-base font-bold text-emerald-400">100 Hz Bio-Bus</span>
           </div>
         </div>
 
-        {/* RECHARTS DYNAMIC 30-DAY TREND CHART */}
-        <div className="bg-slate-950 border border-slate-800 p-2.5 mb-3">
-          <div className="flex justify-between items-center text-[10px] text-slate-400 mb-2">
-            <span>30-DAY MISSION TRAJECTORY (SOL 1 TO {currentSol})</span>
-            <span className="text-cyan-400">{config.primaryName} vs. NASA Baseline</span>
-          </div>
-
-          <div className="h-44 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={historyData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <XAxis dataKey="sol" stroke="#475569" fontSize={10} tickFormatter={(v) => `S${v}`} />
-                <YAxis stroke="#475569" fontSize={10} domain={['auto', 'auto']} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: "#020617", border: "1px solid #1e293b", fontSize: "11px", fontFamily: "monospace" }}
-                  formatter={(val: any) => [`${val} ${config.unit}`, config.primaryName]}
-                  labelFormatter={(label) => `Sol ${label}`}
-                />
-                <ReferenceLine y={config.thresholdVal} stroke="#f43f5e" strokeDasharray="3 3" label={{ value: "THRESHOLD", fill: "#f43f5e", fontSize: 9, position: "insideTopRight" }} />
-                <ReferenceLine y={config.baselineVal} stroke="#06b6d4" strokeDasharray="2 2" label={{ value: "BASELINE", fill: "#06b6d4", fontSize: 9, position: "insideBottomRight" }} />
-                <Area type="monotone" dataKey={config.primaryKey} fill="#06b6d4" fillOpacity={0.1} stroke="none" />
-                <Line
-                  type="monotone"
-                  dataKey={config.primaryKey}
-                  stroke="#22d3ee"
-                  strokeWidth={2}
-                  dot={{ r: 2, fill: "#22d3ee" }}
-                  activeDot={{ r: 5, fill: "#f43f5e" }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
+        {/* RECHARTS TIME-SERIES CONTAINER */}
+        <div className="h-44 sm:h-52 w-full bg-black/60 border border-slate-800/80 rounded-xl p-2 mb-3">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="curveGlow" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="sol" stroke="#64748b" fontSize={9} tickLine={false} tickFormatter={(val) => `S${val}`} />
+              <YAxis stroke="#64748b" fontSize={9} tickLine={false} domain={['auto', 'auto']} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#030712",
+                  borderColor: "#06b6d4",
+                  fontSize: "10px",
+                  fontFamily: "monospace",
+                  borderRadius: "8px",
+                  boxShadow: "0 0 15px rgba(6,182,212,0.2)",
+                }}
+              />
+              {/* Shaded space baseline band */}
+              <ReferenceLine y={config.baselineVal} stroke="#06b6d4" strokeDasharray="3 3" label={{ value: config.baselineLabel, fill: '#06b6d4', fontSize: 8, position: 'insideBottomRight' }} />
+              {/* Critical clinical threshold breach line */}
+              <ReferenceLine y={config.thresholdVal} stroke="#f43f5e" strokeWidth={1.5} label={{ value: config.thresholdLabel, fill: '#f43f5e', fontSize: 8, position: 'insideTopRight' }} />
+              <Area type="monotone" dataKey={config.primaryKey} stroke="#06b6d4" strokeWidth={2.5} fillOpacity={1} fill="url(#curveGlow)" />
+              <Line type="monotone" dataKey={config.primaryKey} stroke="#22d3ee" strokeWidth={2} dot={{ r: 2, fill: "#22d3ee" }} activeDot={{ r: 5, fill: "#f43f5e" }} />
+            </ComposedChart>
+          </ResponsiveContainer>
         </div>
 
-        {/* CLINICAL EXPLANATIONS & CITATIONS */}
-        <div className="space-y-2 text-[11px]">
-          {currentMetric.eventTag && (
-            <div className="p-2 border border-amber-600/80 bg-amber-950/40 text-amber-200 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-              <div>
-                <strong>SCRIPTED EVENT ON SOL {currentSol}:</strong> {currentMetric.eventTag}
-              </div>
+        {/* CLINICAL NASA HRP EVIDENCE BREAKDOWN */}
+        <div className="bg-black/60 border border-slate-800/80 rounded-xl p-3 text-[10px] space-y-2">
+          <div className="flex items-start gap-2">
+            <Info className="w-3.5 h-3.5 text-cyan-400 mt-0.5 shrink-0" />
+            <div>
+              <span className="text-white font-bold block">FLUID SHIFT & SANS MECHANISM:</span>
+              <span className="text-slate-400">{config.fluidShiftDetail}</span>
             </div>
-          )}
+          </div>
 
-          <div className="p-2.5 bg-slate-950 border border-slate-800 text-[10px] space-y-1">
-            <div className="text-cyan-400 font-bold flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5" />
-              <span>NASA HRP CLINICAL MECHANISM & CITATION</span>
-            </div>
-            <div className="text-slate-400 italic text-[9px] mb-1">
-              Ref: {config.nasaCitation}
-            </div>
-            <div className="text-slate-300 leading-relaxed">
-              • <strong>Pathophysiology:</strong> {config.whyExamNeeded}
-            </div>
-            <div className="text-slate-300 leading-relaxed">
-              • <strong>Fluid Redistribution:</strong> {config.fluidShiftDetail}
-            </div>
-            <div className="text-slate-300 leading-relaxed">
-              • <strong>Critical Trigger:</strong> {config.criticalThreshold}
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
+            <div>
+              <span className="text-white font-bold block">CLINICAL ACTION TRIGGER:</span>
+              <span className="text-slate-400">{config.criticalThreshold}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="pt-2 border-t border-slate-800 text-[9px] text-slate-500 flex justify-between">
-        <span>NASA-STD-3001 VOL 1 ALIGNED</span>
-        <span className="text-emerald-400 flex items-center gap-1">
-          <CheckCircle2 className="w-3 h-3" /> CLINICAL EVIDENCE ENGINE ACTIVE
-        </span>
+      {/* NASA CITATION FOOTNOTE */}
+      <div className="mt-3 pt-2 border-t border-slate-900 text-[9px] text-slate-500 flex items-center justify-between">
+        <span>AUTHORITATIVE EVIDENCE BASE:</span>
+        <span className="text-cyan-400 font-bold">{config.nasaCitation}</span>
       </div>
     </div>
   );
