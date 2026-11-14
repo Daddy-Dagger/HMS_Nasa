@@ -20,27 +20,27 @@ export const EscalationLadder: React.FC<EscalationLadderProps> = ({
       tier: 1,
       label: "TIER 1: AUTONOMOUS INDIVIDUAL ACTION",
       targetHazard: "Cephalic Fluid Shift & Circadian Disruption",
-      description: "Non-pharmacological physical & environmental countermeasures managed directly by the operator.",
-      protocol: "1) Don Lower Body Negative Pressure (LBNP) chaps for 30m at -35 mmHg. 2) Re-hydrate with 0.9% isotonic electrolyte pouch. 3) Shift cabin lighting spectrum to 2100K.",
+      description: "Non-pharmacological physical & environmental countermeasures managed directly by the operator (NASA-STD-3001).",
+      protocol: "1) Don Lower Body Negative Pressure (LBNP) chaps: -35 mmHg for 30m. 2) Ingest 1.0L fluid loading (or 8x 1g NaCl salt tablets with 1L H2O). 3) SSLA Lighting: Switch to 2100K blue-minimized (<10 lux blue) 2h prior to sleep.",
       requiresGroundAuth: false,
     },
     {
       tier: 2,
       label: "TIER 2: CREW MEDICAL OFFICER (CMO) PROTOCOL",
-      targetHazard: "SANS Optic Edema & Sustained Hypertension",
-      description: "Peer-assisted clinical diagnostics inside the habitat medical workstation.",
-      protocol: "1) CMO conducts portable ocular ultrasound (measuring optic nerve sheath diameter >5.8mm). 2) Administer micro-dose transdermal adaptogen sequence 4B. 3) Restrict EVA operations for 48h.",
+      targetHazard: "SANS Optic Edema & Sustained Hypertension / IJV Stasis",
+      description: "Peer-assisted clinical diagnostics and targeted pharmacotherapy inside the habitat medical workstation.",
+      protocol: "1) CMO in-flight ultrasound: Assess Optic Nerve Sheath Diameter (ONSD threshold >5.8mm) & IJV flow stasis. 2) Ophthalmoscopy: Frisén Scale ODE check. 3) Administer 5.0mg melatonin (timed 5.75h pre-bedtime) or 5mg zolpidem.",
       requiresGroundAuth: false,
     },
     {
       tier: 3,
       label: "TIER 3: ASYNCHRONOUS FLIGHT-SURGEON ESCALATION",
-      targetHazard: "Critical Multi-System Drift",
+      targetHazard: "Critical Multi-System Drift / Loss of Mission Risk",
       description: "Compilation and transmission of the condensed Ground Dossier.",
       protocol:
         delayMode === "MARS_20M_DELAY"
-          ? "Deep-space 20m lag active. Onboard AI executes autonomous stabilization protocol. Diagnostic telemetry compressed and queued for asynchronous downlink to Houston Flight Surgeon."
-          : "Direct real-time telemedicine session initiated with MCC-Houston Surgeon.",
+          ? "Deep-space 20m round-trip lag active (6-44m range). Onboard AI executes autonomous stabilization protocol. Diagnostic telemetry compressed and queued for asynchronous downlink to Houston Flight Surgeon."
+          : "Direct real-time telemedicine session initiated with MCC-Houston Flight Surgeon.",
       requiresGroundAuth: true,
     },
   ];
