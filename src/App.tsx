@@ -11,7 +11,9 @@ import {
   Radio,
   AlertTriangle,
   CheckCircle2,
-  Database,
+  ChevronDown,
+  Target,
+  Check,
 } from "lucide-react";
 import {
   AnatomicalZone,
@@ -47,11 +49,31 @@ interface CrewMemberInfo {
   role: string;
 }
 
+const SCENARIO_PRESETS = [
+  { sol: 1, label: "Sol 1: Baseline", desc: "All systems nominal across crew", shortLabel: "Sol 1 Baseline" },
+  { sol: 8, label: "Sol 8: Motion Glitch", desc: "SQM drops to 19% (motion artifact)", shortLabel: "Sol 8 Glitch" },
+  { sol: 18, label: "Sol 18: Sleep Loss", desc: "Circadian disruption (3.8h sleep)", shortLabel: "Sol 18 Sleep" },
+  { sol: 23, label: "Sol 23: Elevated BP", desc: "Tier 1 rest & SSLA amber protocol", shortLabel: "Sol 23 BP Spike" },
+  { sol: 28, label: "Sol 28: Ground Dossier", desc: "Flight Surgeon packet downlink & sync", shortLabel: "Sol 28 Dossier" },
+];
+
 export default function App() {
   // Current Sol (Day 1 to 30)
   const [currentSol, setCurrentSol] = useState<number>(23);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const playTimerRef = useRef<number | null>(null);
+  const [scenarioMenuOpen, setScenarioMenuOpen] = useState<boolean>(false);
+  const scenarioMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (scenarioMenuRef.current && !scenarioMenuRef.current.contains(e.target as Node)) {
+        setScenarioMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Selected anatomical zone
   const [selectedZone, setSelectedZone] = useState<AnatomicalZone>("CARDIOVASCULAR");
@@ -263,21 +285,21 @@ export default function App() {
   return (
     <div className="min-h-screen text-slate-800 p-3 sm:p-5 flex flex-col justify-between font-sans select-none antialiased">
       {/* PERSISTENT CLINICAL DECISION SUPPORT DISCLAIMER BANNER */}
-      <div className="bg-amber-500/10 border border-amber-300/60 rounded-2xl px-4 py-2 mb-3 text-xs flex items-center justify-between gap-3 text-amber-900 shadow-sm">
+      <div className="bg-amber-500/10 border border-amber-300/50 rounded-xl px-3.5 py-1.5 mb-2.5 text-[11px] flex items-center justify-between gap-3 text-amber-900 shadow-sm">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
           <span className="leading-tight">
-            <strong>CLINICAL DECISION SUPPORT SYSTEM (CDS):</strong> For mission operational decision-support only. Not intended for autonomous clinical diagnosis. Defer all interventions to designated Flight Surgeon / CMO. Data is synthetic.
+            <strong>CLINICAL DECISION SUPPORT SYSTEM (CDS):</strong> Operational decision-support only. Not intended for autonomous clinical diagnosis. Defer all interventions to designated Flight Surgeon / CMO. Data is synthetic.
           </span>
         </div>
-        <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-200/60 text-amber-800 uppercase shrink-0">
+        <span className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-200/60 text-amber-800 uppercase shrink-0">
           Synthetic Telemetry
         </span>
       </div>
 
       {/* SYNC NOTICE BANNER WHEN COMMS RESTORED */}
       {syncNotice && (
-        <div className="bg-emerald-600 text-white rounded-2xl px-4 py-2.5 mb-3 text-xs font-semibold flex items-center justify-between gap-2 shadow-md animate-fadeIn">
+        <div className="bg-emerald-600 text-white rounded-2xl px-4 py-2 mb-2.5 text-xs font-semibold flex items-center justify-between gap-2 shadow-md animate-fadeIn">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-200" />
             <span>{syncNotice}</span>
@@ -288,7 +310,7 @@ export default function App() {
 
       {/* PROCEDURE COMPLETION TOAST */}
       {procedureCompletionLog && (
-        <div className="bg-slate-900 text-white rounded-2xl px-4 py-2.5 mb-3 text-xs font-semibold flex items-center justify-between gap-2 shadow-lg border border-slate-700 animate-fadeIn">
+        <div className="bg-slate-900 text-white rounded-2xl px-4 py-2 mb-2.5 text-xs font-semibold flex items-center justify-between gap-2 shadow-lg border border-slate-700 animate-fadeIn">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-emerald-400" />
             <span>{procedureCompletionLog}</span>
@@ -299,74 +321,72 @@ export default function App() {
         </div>
       )}
 
-      {/* APEX HEADER WITH MULTI-DISPLAY SELECTOR & 3-WAY DELAY/BLACKOUT TOGGLE */}
-      <header className="glass-card rounded-2xl px-5 py-3 flex flex-wrap items-center justify-between gap-3 mb-3 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
-        <div className="flex items-center gap-3.5">
+      {/* APEX HEADER WITH MULTI-DISPLAY SELECTOR & ACTIONS TOOLBAR */}
+      <header className="glass-card rounded-2xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 mb-2.5 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+        <div className="flex items-center gap-3">
           {/* AURORA APP ICON */}
           <div
-            className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm"
+            className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm shrink-0"
             style={{ background: "linear-gradient(135deg, #c4b5fd, #fda4af, #93c5fd)" }}
           >
-            <span className="text-white font-extrabold text-base tracking-tight">A</span>
+            <span className="text-white font-extrabold text-sm tracking-tight">A</span>
           </div>
 
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-900 text-base tracking-tight">AEGIS</span>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                Decision-Support
-              </span>
+              <span className="font-bold text-slate-900 text-sm tracking-tight">AEGIS</span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                Synthetic
+                Artemis CDS • Synthetic
               </span>
             </div>
-            <p className="text-xs text-slate-400 font-medium">NASA Artemis & Deep-Space Health Deck</p>
+            <p className="text-[11px] text-slate-400 font-medium">NASA Deep-Space Autonomous Health Deck</p>
           </div>
 
           <span className="hidden sm:inline text-slate-200 font-light mx-1">|</span>
 
-          {/* VIEW MODE TOGGLE */}
-          <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-full border border-slate-200/80">
+          {/* COMPACT VIEW MODE TOGGLE */}
+          <div className="flex items-center gap-0.5 bg-slate-100/90 p-1 rounded-xl border border-slate-200/80">
             <button
               onClick={() => setViewMode("EXPEDITION_CONSOLE")}
-              className={`px-3.5 py-1.5 text-xs rounded-full flex items-center gap-1.5 transition font-medium ${
+              className={`px-2.5 py-1 text-xs rounded-lg flex items-center gap-1.5 transition font-medium ${
                 viewMode === "EXPEDITION_CONSOLE"
                   ? "bg-slate-900 text-white shadow-sm"
                   : "text-slate-500 hover:text-slate-900"
               }`}
+              title="Desktop Expedition Console"
             >
               <Monitor className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Console</span>
-              <span className="md:hidden">PC</span>
+              <span>Console</span>
             </button>
             <button
               onClick={() => setViewMode("MOBILE_PAD")}
-              className={`px-3.5 py-1.5 text-xs rounded-full flex items-center gap-1.5 transition font-medium ${
+              className={`px-2.5 py-1 text-xs rounded-lg flex items-center gap-1.5 transition font-medium ${
                 viewMode === "MOBILE_PAD"
                   ? "bg-slate-900 text-white shadow-sm"
                   : "text-slate-500 hover:text-slate-900"
               }`}
+              title="Mobile Comm-Pad View"
             >
               <Smartphone className="w-3.5 h-3.5" />
               <span>Mobile</span>
             </button>
             <button
               onClick={() => setViewMode("WEARABLE_WATCH_HUD")}
-              className={`px-3.5 py-1.5 text-xs rounded-full flex items-center gap-1.5 transition font-medium ${
+              className={`px-2.5 py-1 text-xs rounded-lg flex items-center gap-1.5 transition font-medium ${
                 viewMode === "WEARABLE_WATCH_HUD"
                   ? "bg-slate-900 text-white shadow-sm"
                   : "text-slate-500 hover:text-slate-900"
               }`}
+              title="Wearable HUD View"
             >
               <Watch className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Wearable HUD</span>
-              <span className="md:hidden">Watch</span>
+              <span>HUD</span>
             </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* 3-WAY DELAY / BLACKOUT MODE SELECTOR */}
+        <div className="flex items-center gap-2">
+          {/* 3-WAY DELAY / BLACKOUT COMMS STATUS BUTTON */}
           <button
             onClick={cycleDelayMode}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition border active:scale-95 ${
@@ -376,7 +396,7 @@ export default function App() {
                 ? "bg-amber-50 text-amber-700 border-amber-200"
                 : "bg-emerald-50 text-emerald-700 border-emerald-200"
             }`}
-            title="Click to cycle: LEO Real-Time -> Mars 20m Lag -> Communications Blackout"
+            title="Click to cycle: LEO Real-Time -> Mars 20m Lag -> Blackout"
           >
             <Radio className="w-3.5 h-3.5" />
             <span>
@@ -386,55 +406,54 @@ export default function App() {
                 ? "Mars 20m Lag"
                 : "LEO Real-time"}
             </span>
+            {queuedDossiers.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 text-[10px] rounded-full bg-amber-200 text-amber-900 font-bold">
+                {queuedDossiers.filter((d) => d.status === "QUEUED_LOCAL").length} buffered
+              </span>
+            )}
           </button>
 
-          {/* QUEUED PACKETS PILL IF BUFFERED */}
-          {queuedDossiers.length > 0 && (
-            <div
-              onClick={() => setPacketOpen(true)}
-              className="flex items-center gap-1 bg-amber-100 border border-amber-300 text-amber-900 px-2.5 py-1.5 rounded-full text-xs font-bold cursor-pointer hover:bg-amber-200 transition"
-              title="Buffered dossiers pending downlink"
+          {/* UNIFIED CLINICAL SUITE ACTION BAR */}
+          <div className="flex items-center bg-white/90 backdrop-blur-sm border border-slate-200 rounded-full shadow-sm divide-x divide-slate-100 overflow-hidden">
+            <button
+              onClick={() => setSansExamOpen(true)}
+              className="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition flex items-center gap-1.5 active:scale-95"
+              title="Calibrated SANS Visual Acuity Protocol"
             >
-              <Database className="w-3 h-3 text-amber-700" />
-              <span>{queuedDossiers.filter((d) => d.status === "QUEUED_LOCAL").length} Buffered</span>
-            </div>
-          )}
+              <Eye className="w-3.5 h-3.5 text-indigo-500" />
+              <span>SANS Exam</span>
+            </button>
 
-          {/* SANS OCULAR EXAM BUTTON */}
-          <button
-            onClick={() => setSansExamOpen(true)}
-            className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3.5 py-1.5 rounded-full text-xs font-semibold transition shadow-sm active:scale-95"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">SANS Exam</span>
-          </button>
+            <button
+              onClick={() => {
+                setActiveProcedure(
+                  currentTier === 2
+                    ? "OCULAR_ULTRASOUND"
+                    : selectedZone === "NEURO_BEHAVIORAL"
+                    ? "CIRCADIAN_LIGHTING"
+                    : "TIER1_REST_RECOVERY"
+                );
+                setProcedureModalOpen(true);
+              }}
+              className="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-emerald-600 transition flex items-center gap-1.5 active:scale-95"
+              title="Clinical Countermeasure Checklist & Protocols"
+            >
+              <Activity className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Procedures</span>
+            </button>
 
-          {/* PROCEDURE GUIDE BUTTON */}
-          <button
-            onClick={() => {
-              setActiveProcedure(
-                currentTier === 2
-                  ? "OCULAR_ULTRASOUND"
-                  : selectedZone === "NEURO_BEHAVIORAL"
-                  ? "CIRCADIAN_LIGHTING"
-                  : "TIER1_REST_RECOVERY"
-              );
-              setProcedureModalOpen(true);
-            }}
-            className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3.5 py-1.5 rounded-full text-xs font-semibold transition shadow-sm active:scale-95"
-          >
-            <Activity className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Procedures</span>
-          </button>
-
-          {/* FLIGHT SURGEON DOSSIER BUTTON */}
-          <button
-            onClick={() => setPacketOpen(true)}
-            className="flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-1.5 rounded-full text-xs font-semibold transition shadow-sm active:scale-95"
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Ground Dossier</span>
-          </button>
+            <button
+              onClick={() => setPacketOpen(true)}
+              className="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition flex items-center gap-1.5 relative active:scale-95"
+              title="Ground Telemetry Dossier & Flight Surgeon Sync"
+            >
+              <FileText className="w-3.5 h-3.5 text-slate-500" />
+              <span>Ground Dossier</span>
+              {queuedDossiers.length > 0 && (
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping absolute top-1.5 right-1.5" />
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -486,95 +505,110 @@ export default function App() {
       ) : (
         /* VIEWPORT 3: PC EXPEDITION CONSOLE */
         <div className="flex flex-col flex-1">
-          {/* MULTI-ASTRONAUT CREW MESH BAR (DYNAMIC STATS FROM DRIFT ENGINE) */}
-          <section className="glass-card px-4 py-2.5 mb-3 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs shadow-sm">
-            <div className="flex items-center gap-2">
+          {/* UNIFIED CREW MESH & SIMULATION PERTURBATION BAR */}
+          <section className="glass-card px-4 py-2 mb-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm">
+            <div className="flex items-center gap-2.5">
               <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Crew Mesh:</span>
-              <span className="text-[10px] text-slate-400">Drift Engine Monitored</span>
+              <div className="flex flex-wrap gap-1.5">
+                {crewRoster.map((crew) => {
+                  const liveStatus = crewMeshStatusMap[crew.id];
+                  return (
+                    <button
+                      key={crew.id}
+                      onClick={() => setActiveCrew(crew.id)}
+                      className={`px-3 py-1 rounded-full text-xs flex items-center gap-1.5 transition font-medium border ${
+                        activeCrew === crew.id
+                          ? "bg-slate-900 border-slate-900 text-white shadow-sm"
+                          : "bg-white/80 border-slate-200/80 text-slate-600 hover:border-slate-300"
+                      }`}
+                    >
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          liveStatus === "CRITICAL"
+                            ? "bg-rose-500 animate-pulse"
+                            : liveStatus === "ATTENTION"
+                            ? "bg-amber-400"
+                            : "bg-emerald-500"
+                        }`}
+                      />
+                      <span>{crew.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {crewRoster.map((crew) => {
-                const liveStatus = crewMeshStatusMap[crew.id];
-                return (
-                  <button
-                    key={crew.id}
-                    onClick={() => setActiveCrew(crew.id)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs flex items-center gap-2 transition font-medium border ${
-                      activeCrew === crew.id
-                        ? "bg-slate-900 border-slate-900 text-white shadow-sm"
-                        : "bg-white/80 border-slate-200/80 text-slate-600 hover:border-slate-300"
-                    }`}
-                  >
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        liveStatus === "CRITICAL"
-                          ? "bg-rose-500 animate-pulse"
-                          : liveStatus === "ATTENTION"
-                          ? "bg-amber-400"
-                          : "bg-emerald-500"
-                      }`}
-                    />
-                    <span>{crew.name}</span>
-                    <span className="text-[10px] opacity-75 font-normal">
-                      ({liveStatus})
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            {/* COMPACT FAULT INJECTION CONTROLLER */}
+            <FaultInjectionBar
+              activeFault={activeFault}
+              onInject={handleInjectFault}
+              onReset={handleResetFault}
+              activeCrewName={crewRoster.find((c) => c.id === activeCrew)?.name || "CDR MILLER"}
+              currentSol={currentSol}
+            />
           </section>
 
-          {/* FAULT INJECTION CONTROL BAR */}
-          <FaultInjectionBar
-            activeFault={activeFault}
-            onInject={handleInjectFault}
-            onReset={handleResetFault}
-            activeCrewName={crewRoster.find((c) => c.id === activeCrew)?.name || "CDR MILLER"}
-            currentSol={currentSol}
-          />
-
           {/* 30-DAY MISSION TIMELINE SCRUBBER */}
-          <section className="glass-card p-4 mb-4 rounded-2xl shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-2.5">
+          <section className="glass-card p-3 sm:px-4 sm:py-2.5 mb-3 rounded-2xl shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2.5 mb-2">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsPlaying(!isPlaying)}
-                  className="px-3.5 py-1.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 transition flex items-center gap-1.5 text-xs font-semibold shadow-sm"
+                  className="px-3 py-1 rounded-full bg-slate-900 text-white hover:bg-slate-800 transition flex items-center gap-1.5 text-xs font-semibold shadow-sm active:scale-95"
                 >
-                  {isPlaying ? <Square className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-                  <span>{isPlaying ? "Pause" : "Play Timeline"}</span>
+                  {isPlaying ? <Square className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
+                  <span>{isPlaying ? "Pause" : "Play"}</span>
                 </button>
 
-                <span className="text-sm font-semibold text-slate-900">
+                <span className="text-xs font-semibold text-slate-800">
                   Mission Timeline: <span className="text-indigo-600 font-bold">Sol {currentSol}</span> / 30
                 </span>
               </div>
 
-              {/* EVENT JUMP PILLS */}
-              <div className="flex flex-wrap gap-1.5 text-xs">
-                {[
-                  { sol: 1, label: "Sol 1: Baseline" },
-                  { sol: 8, label: "Sol 8: Glitch (Motion Artifact)" },
-                  { sol: 18, label: "Sol 18: Sleep Loss" },
-                  { sol: 23, label: "Sol 23: Elevated BP" },
-                  { sol: 28, label: "Sol 28: Ground Dossier" },
-                ].map((preset) => (
-                  <button
-                    key={preset.sol}
-                    onClick={() => {
-                      setIsPlaying(false);
-                      setCurrentSol(preset.sol);
-                    }}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition border ${
-                      currentSol === preset.sol
-                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm font-semibold"
-                        : "bg-white/80 border-slate-200/80 text-slate-500 hover:text-slate-800"
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
+              {/* SCENARIO MILESTONE PRESET DROPDOWN */}
+              <div className="relative" ref={scenarioMenuRef}>
+                <button
+                  onClick={() => setScenarioMenuOpen(!scenarioMenuOpen)}
+                  className="px-3 py-1 rounded-full text-xs font-medium border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 shadow-sm transition active:scale-95"
+                >
+                  <Target className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>
+                    Scenario:{" "}
+                    <strong className="text-slate-900">
+                      {SCENARIO_PRESETS.find((p) => p.sol === currentSol)?.shortLabel || `Sol ${currentSol}`}
+                    </strong>
+                  </span>
+                  <ChevronDown className="w-3 h-3 text-slate-400" />
+                </button>
+
+                {scenarioMenuOpen && (
+                  <div className="absolute right-0 top-full mt-1.5 w-64 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200 z-40 p-1.5 text-xs animate-fadeIn">
+                    <div className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-slate-400 border-b border-slate-100 mb-1">
+                      Jump to Scenario Milestone
+                    </div>
+                    {SCENARIO_PRESETS.map((preset) => (
+                      <button
+                        key={preset.sol}
+                        onClick={() => {
+                          setIsPlaying(false);
+                          setCurrentSol(preset.sol);
+                          setScenarioMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-xl flex items-center justify-between transition ${
+                          currentSol === preset.sol
+                            ? "bg-indigo-50 text-indigo-900 font-semibold"
+                            : "hover:bg-slate-50 text-slate-700"
+                        }`}
+                      >
+                        <div>
+                          <span className="font-medium">{preset.label}</span>
+                          <p className="text-[10px] text-slate-400 font-normal">{preset.desc}</p>
+                        </div>
+                        {currentSol === preset.sol && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -588,7 +622,7 @@ export default function App() {
                 setIsPlaying(false);
                 setCurrentSol(Number(e.target.value));
               }}
-              className="w-full accent-indigo-600 bg-slate-200 cursor-pointer h-2 rounded-full"
+              className="w-full accent-indigo-600 bg-slate-200 cursor-pointer h-1.5 rounded-full"
             />
           </section>
 
