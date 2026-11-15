@@ -39,11 +39,11 @@ export const FaultInjectionBar: React.FC<FaultInjectionBarProps> = ({
       : "Nominal";
 
   return (
-    <div className="relative inline-block" ref={menuRef}>
+    <div className={`relative inline-block ${menuOpen ? "z-50" : "z-10"}`} ref={menuRef}>
       {activeFault === "NONE" ? (
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 transition border border-slate-200/80 active:scale-95"
+          className="px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 transition border border-slate-200/80 active:scale-95 shadow-sm"
           title={`Inject perturbation against ${activeCrewName}'s Sol ${currentSol} baseline`}
         >
           <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
@@ -73,7 +73,7 @@ export const FaultInjectionBar: React.FC<FaultInjectionBarProps> = ({
       )}
 
       {menuOpen && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200 z-50 p-2 text-xs animate-fadeIn">
+        <div className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-[0_20px_50px_rgba(15,23,42,0.25)] border border-slate-200 z-50 p-2 text-xs animate-fadeIn ring-1 ring-slate-900/5">
           <div className="px-2.5 py-1.5 text-[10px] uppercase font-bold tracking-wider text-slate-400 border-b border-slate-100 mb-1 flex items-center justify-between">
             <span>Inject Drift / Glitch</span>
             <span className="text-indigo-600 font-semibold">

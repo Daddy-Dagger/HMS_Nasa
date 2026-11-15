@@ -506,7 +506,7 @@ export default function App() {
         /* VIEWPORT 3: PC EXPEDITION CONSOLE */
         <div className="flex flex-col flex-1">
           {/* UNIFIED CREW MESH & SIMULATION PERTURBATION BAR */}
-          <section className="glass-card px-4 py-2 mb-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm">
+          <section className="glass-card px-4 py-2 mb-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm relative z-30">
             <div className="flex items-center gap-2.5">
               <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Crew Mesh:</span>
               <div className="flex flex-wrap gap-1.5">
@@ -549,7 +549,7 @@ export default function App() {
           </section>
 
           {/* 30-DAY MISSION TIMELINE SCRUBBER */}
-          <section className="glass-card p-3 sm:px-4 sm:py-2.5 mb-3 rounded-2xl shadow-sm">
+          <section className="glass-card p-3 sm:px-4 sm:py-2.5 mb-3 rounded-2xl shadow-sm relative z-20">
             <div className="flex flex-wrap items-center justify-between gap-2.5 mb-2">
               <div className="flex items-center gap-3">
                 <button
@@ -566,7 +566,7 @@ export default function App() {
               </div>
 
               {/* SCENARIO MILESTONE PRESET DROPDOWN */}
-              <div className="relative" ref={scenarioMenuRef}>
+              <div className="relative z-30" ref={scenarioMenuRef}>
                 <button
                   onClick={() => setScenarioMenuOpen(!scenarioMenuOpen)}
                   className="px-3 py-1 rounded-full text-xs font-medium border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 shadow-sm transition active:scale-95"
@@ -627,7 +627,7 @@ export default function App() {
           </section>
 
           {/* MAIN 3-COLUMN CLINICAL WORKSTATION */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 mb-3">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 mb-3 relative z-10">
             {/* COLUMN 1: ANATOMICAL DISPLAY (4 COLS) */}
             <div className="lg:col-span-4 flex flex-col">
               <div className="flex items-center justify-between mb-2 px-1">
