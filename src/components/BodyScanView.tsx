@@ -148,15 +148,15 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
   const getCardPosition = (position: string) => {
     switch (position) {
       case "left-top":
-        return "left-1 sm:left-2 top-[24%]";
+        return "left-1 sm:left-2 top-[22%]";
       case "right-top":
-        return "right-1 sm:right-2 top-[26%]";
+        return "right-1 sm:right-2 top-[37%]";
       case "left-mid":
-        return "left-1 sm:left-2 top-[50%]";
+        return "left-1 sm:left-2 top-[51%]";
       case "right-head":
-        return "right-1 sm:right-2 top-[10%]";
+        return "right-1 sm:right-2 top-[7%]";
       case "left-bottom":
-        return "left-1 sm:left-2 top-[72%]";
+        return "left-1 sm:left-2 top-[76%]";
       default:
         return "left-2 top-[40%]";
     }
@@ -308,7 +308,7 @@ export const BodyScanView: React.FC<BodyScanViewProps> = ({
 
             <circle cx="60" cy="32" r="3" fill="white" opacity={visibleCards.includes(3) ? "0.95" : "0.25"} className="transition-opacity duration-500" />
             <circle cx="55" cy="76" r="3" fill="white" opacity={visibleCards.includes(0) ? "0.95" : "0.25"} className="transition-opacity duration-500" />
-            <circle cx="65" cy="70" r="2.5" fill="white" opacity={visibleCards.includes(1) ? "0.95" : "0.25"} className="transition-opacity duration-500" />
+            <circle cx="65" cy="90" r="2.5" fill="white" opacity={visibleCards.includes(1) ? "0.95" : "0.25"} className="transition-opacity duration-500" />
             <circle cx="60" cy="140" r="3" fill="white" opacity={visibleCards.includes(2) ? "0.95" : "0.25"} className="transition-opacity duration-500" />
             <circle cx="50" cy="235" r="2.5" fill="white" opacity={visibleCards.includes(4) ? "0.95" : "0.25"} className="transition-opacity duration-500" />
           </svg>
